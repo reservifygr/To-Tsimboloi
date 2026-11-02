@@ -98,7 +98,7 @@ Key rules, enforced in code and tests:
 
 1. `SITE_URL=https://<final-domain> npm run build` (add `INDEXABLE=1` only after the owner approves go-live).
 2. Upload `dist/`. Configure the host to serve `404.html` for unknown paths.
-3. GitHub Pages under a sub-path: `BASE=/To-Tsimboloi SITE_URL=https://reservifygr.github.io/To-Tsimboloi npm run build`.
+3. **GitHub Pages (set up):** `.github/workflows/pages.yml` runs the unit tests, builds with the right sub-path and deploys on every push to `main`. One-time step: repo **Settings → Pages → Source: GitHub Actions**. Live at https://reservifygr.github.io/To-Tsimboloi/ (noindex while in demo mode).
 4. After the domain is final, regenerate and **phone-scan the table QR code** before printing.
 
 ## Production roadmap (not built, not connected)
