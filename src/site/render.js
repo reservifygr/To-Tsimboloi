@@ -36,7 +36,7 @@ function header(c, lang, route) {
   }).join('');
   return `<header class="site-header">
   <div class="wrap bar">
-    <a class="brand" href="${pathFor(c, lang, '')}" aria-label="${esc(S[lang].brand)}"><span class="brand-mark" aria-hidden="true">T</span><span class="brand-name">${esc(S[lang].brand)}</span></a>
+    <a class="brand" href="${pathFor(c, lang, '')}"><img class="brand-logo" src="${c.base}/images/logo-sign.webp" alt="${esc(S[lang].brand)}" width="440" height="218"></a>
     <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" data-nav-toggle><span class="sr-only">${esc(t(lang, 'nav.menuBtn'))}</span><span class="burger" aria-hidden="true"></span></button>
     <nav id="site-nav" class="site-nav" aria-label="${esc(t(lang, 'nav.main'))}"><ul>${links}</ul></nav>
     <a class="lang-switch" href="${pathFor(c, other, route)}" hreflang="${other}" lang="${other}" data-lang-switch="${other}" aria-label="${esc(t(lang, 'nav.langSwitchLabel'))}">${esc(t(lang, 'nav.langSwitch'))}</a>
@@ -90,8 +90,8 @@ ${robots}
 <meta property="og:image" content="${c.site}${ogImage}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#14213d">
-<link rel="icon" href="${A('/favicon.svg')}" type="image/svg+xml">
 <link rel="icon" href="${A('/favicon-32.png')}" sizes="32x32" type="image/png">
+<link rel="icon" href="${A('/icon-192.png')}" sizes="192x192" type="image/png">
 <link rel="apple-touch-icon" href="${A('/apple-touch-icon.png')}">
 <link rel="stylesheet" href="${A('/assets/site.css')}?v=${c.version}">
 ${jsonld ? `<script type="application/ld+json">${JSON.stringify(jsonld)}</script>` : ''}
@@ -132,6 +132,8 @@ function menuSection(lang) {
   }).join('');
 }
 
+const musicFigure = (c, lang) => `<figure class="music-fig"><img src="${c.base}/images/live-music-sign.webp" alt="${lang === 'el' ? 'Φωτεινή επιγραφή «Το Τσιμπολόι Live music» πάνω από τη σκηνή με μικρόφωνο και κιθάρα' : 'Neon sign reading "To Tsimboloi Live music" above the stage with a microphone and guitar'}" width="814" height="814" loading="lazy"><figcaption>${esc(t(lang, 'home.photoCredit'))}</figcaption></figure>`;
+
 /* ---------- pages ---------- */
 function homePage(c, lang) {
   const sig = ['saganaki', 'tirokafteri', 'fava', 'stuffed-sausage', 'meat-platter', 'orange-pie'].map((id) => MENU.items.find((i) => i.id === id));
@@ -168,13 +170,18 @@ function homePage(c, lang) {
   <a class="btn btn-primary" href="${pathFor(c, lang, 'menu')}">${esc(t(lang, 'home.sigAll'))}</a></div>
 </div></section>
 
-<section class="section"><div class="wrap cards3">
-  <article class="card"><p class="kicker">${esc(t(lang, 'home.musicKicker'))}</p><h3>${esc(t(lang, 'home.musicTitle'))}</h3><p>${esc(t(lang, 'home.musicP'))}</p><a class="link" href="${pathFor(c, lang, 'events')}">${esc(t(lang, 'home.musicLink'))}</a></article>
-  <article class="card"><p class="kicker">${esc(t(lang, 'home.partyKicker'))}</p><h3>${esc(t(lang, 'home.partyTitle'))}</h3><p>${esc(t(lang, 'home.partyP'))}</p><a class="link" href="${pathFor(c, lang, 'events')}#inquiry">${esc(t(lang, 'home.partyLink'))}</a></article>
-  <article class="card"><p class="kicker">${esc(t(lang, 'home.offerKicker'))}</p><h3>${esc(t(lang, 'home.offerTitle'))}</h3><p>${esc(t(lang, 'home.offerP'))}</p><span class="tag">${esc(t(lang, 'offers.existing'))}</span><br><a class="link" href="${pathFor(c, lang, 'offers')}">${esc(t(lang, 'home.offerLink'))}</a></article>
+<section class="section dark"><div class="wrap split">
+  <div><p class="kicker">${esc(t(lang, 'home.musicKicker'))}</p><h2>${esc(t(lang, 'home.musicTitle'))}</h2><p>${esc(t(lang, 'home.musicP'))}</p>
+  <a class="btn btn-light" href="${pathFor(c, lang, 'events')}">${esc(t(lang, 'home.musicLink'))}</a></div>
+  ${musicFigure(c, lang)}
 </div></section>
 
-<section class="section dark"><div class="wrap split">
+<section class="section"><div class="wrap"><div class="cards2">
+  <article class="card"><p class="kicker">${esc(t(lang, 'home.partyKicker'))}</p><h3>${esc(t(lang, 'home.partyTitle'))}</h3><p>${esc(t(lang, 'home.partyP'))}</p><a class="link" href="${pathFor(c, lang, 'events')}#inquiry">${esc(t(lang, 'home.partyLink'))}</a></article>
+  <article class="card"><p class="kicker">${esc(t(lang, 'home.offerKicker'))}</p><h3>${esc(t(lang, 'home.offerTitle'))}</h3><p>${esc(t(lang, 'home.offerP'))}</p><span class="tag">${esc(t(lang, 'offers.existing'))}</span><br><a class="link" href="${pathFor(c, lang, 'offers')}">${esc(t(lang, 'home.offerLink'))}</a></article>
+</div></div></section>
+
+<section class="section tint"><div class="wrap split">
   <div><p class="kicker">${esc(t(lang, 'home.visitKicker'))}</p><h2>${esc(t(lang, 'home.visitTitle'))}</h2>
   <p><a class="big-phone" href="tel:${VENUE.phoneTel}">${esc(VENUE.phoneDisplay)}</a></p>
   <h3 class="h-small">${esc(t(lang, 'home.hoursTitle'))}</h3><p>${esc(t(lang, 'home.hoursPending'))}</p>
@@ -230,8 +237,7 @@ function eventsPage(c, lang) {
   const cards = EVENTS.map((e) => `<article class="card event"><span class="tag">${esc(t(lang, 'events.sampleBadge'))}</span><h2 class="card-title">${esc(L(e.title, lang))}</h2><p>${esc(L(e.blurb, lang))}</p></article>`).join('');
   const body = `${pageHead(lang, 'events', t(lang, 'events.lead'))}
 <div class="wrap">
-  <p class="notice">${esc(t(lang, 'events.noDates'))}</p>
-  <div class="cards2">${cards}</div>
+  <div class="split events-intro">${musicFigure(c, lang)}<div><p class="notice">${esc(t(lang, 'events.noDates'))}</p><div class="cards1">${cards}</div></div></div>
   <section class="section-sm" aria-labelledby="cal-h"><h2 id="cal-h">${esc(t(lang, 'events.calendar'))}</h2><div id="calendar-root"></div></section>
   <section class="section-sm" id="inquiry" aria-labelledby="inq-h"><h2 id="inq-h">${esc(t(lang, 'events.inquiryTitle'))}</h2><p>${esc(t(lang, 'events.inquiryLead'))}</p><div id="inquiry-root"><noscript><p class="notice">${esc(t(lang, 'cta.bookNote'))} ${esc(VENUE.phoneDisplay)}</p></noscript></div></section>
 </div>`;

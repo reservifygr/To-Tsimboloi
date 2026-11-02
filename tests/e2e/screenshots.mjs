@@ -9,7 +9,7 @@ const out = new URL('../../screenshots/', import.meta.url).pathname;
 await mkdir(out, { recursive: true });
 const srv = await start(PORT); const br = await launch();
 try {
-  const dismiss = (p) => p.eval(`document.querySelector('[data-consent=essential]')?.click(); true`);
+  const dismiss = (p) => p.eval(`document.querySelector('[data-consent=essential]')?.click(); document.querySelectorAll('img[loading=lazy]').forEach(i=>i.loading='eager'); Promise.all([...document.images].map(i=>i.complete?1:new Promise(r=>{i.onload=i.onerror=r}))).then(()=>true)`);
   const fresh = async (opts) => { const p = await br.newPage(opts); await p.goto(U('/robots.txt')); await p.eval('localStorage.clear();sessionStorage.clear();true'); return p; };
 
   let p = await fresh({ width: 1440, height: 900 });

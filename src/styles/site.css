@@ -28,6 +28,8 @@ main:focus{outline:none}
 .site-header{position:sticky;top:0;z-index:50;background:rgba(246,241,231,.96);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
 .bar{display:flex;align-items:center;gap:1rem;min-height:64px}
 .brand{display:flex;align-items:center;gap:.6rem;text-decoration:none;color:var(--ink);margin-right:auto}
+.brand-logo{height:52px;width:auto;border-radius:8px;box-shadow:0 2px 8px rgba(20,33,61,.25)}
+@media (max-width:860px){.brand-logo{height:44px}}
 .brand-mark{display:grid;place-items:center;width:34px;height:34px;background:var(--ink);color:var(--paper);font:700 1.2rem var(--serif);border-radius:6px}
 .brand-name{font:700 1.25rem var(--serif)}
 .site-nav ul{display:flex;gap:1.4rem;list-style:none;margin:0;padding:0}
@@ -202,3 +204,4 @@ fieldset{border:0;padding:0;margin:0}
 @media (min-width:901px){.cart-fab{display:none!important}}
 [hidden]{display:none!important}
 .card-title{font-size:1.35rem}
+.cards1{display:grid;gap:1rem;margin-top:1rem}.events-intro{align-items:start;margin-bottom:1rem}

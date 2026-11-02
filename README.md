@@ -89,7 +89,7 @@ Key rules, enforced in code and tests:
 
 - `public/images/interior.webp`, `pan-snails.webp`, `plates-salad.webp`, `salad-feta.webp`, `og-interior.jpg` (crop of the interior): **owner-supplied for this demo**. Written permission to publish is still required. The exterior photo was excluded because it shows the old sign.
 - No stock, press or AI images are used. Press photos found online were not copied (copyright).
-- Favicon / touch icon: a simple "T" monogram made for this demo; replace with the real logo when available.
+- `public/images/live-music-sign.webp` (the venue's neon "Το Τσιμπολόι · Live music" sign, owner-supplied) is the brand image. The header logo (`logo-sign.webp`) and the favicons/touch icons are crops of the same photo. A clean vector version of the logo would be sharper at small sizes: ask the owner whether one exists.
 - No university or college logos or names are used, and no partnership is implied.
 
 ## Deployment (static hosting)

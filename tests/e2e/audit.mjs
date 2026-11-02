@@ -7,7 +7,7 @@ export const AUDIT = `(() => {
   if (q('h1').filter(visible).length !== 1) out.push('expected exactly one visible h1, got ' + q('h1').filter(visible).length);
   if (!q('main').length) out.push('no <main>');
   q('img').forEach((i) => { if (!i.hasAttribute('alt')) out.push('img without alt: ' + i.src); });
-  const name = (e) => (e.getAttribute('aria-label') || e.getAttribute('aria-labelledby') && document.getElementById(e.getAttribute('aria-labelledby'))?.textContent || e.innerText || e.textContent || e.title || '').trim();
+  const name = (e) => (e.getAttribute('aria-label') || e.getAttribute('aria-labelledby') && document.getElementById(e.getAttribute('aria-labelledby'))?.textContent || e.innerText || e.textContent || e.title || [...e.querySelectorAll('img[alt]')].map((i) => i.alt).join(' ') || '').trim();
   q('button, a[href]').filter(visible).forEach((e) => { if (!name(e)) out.push('no accessible name: ' + e.outerHTML.slice(0, 80)); });
   q('input:not([type=hidden]), select, textarea').filter(visible).forEach((e) => {
     const lbl = e.id && document.querySelector('label[for="' + e.id + '"]');
