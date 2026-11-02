@@ -1,0 +1,45 @@
+// Generates the review screenshots into screenshots/. Usage: npm run build && npm run shots
+import { mkdir } from 'node:fs/promises';
+import { launch } from './lib.mjs';
+import { start } from '../../scripts/serve.mjs';
+
+const PORT = 4800 + Math.floor(Math.random() * 100);
+const U = (p) => `http://localhost:${PORT}${p}`;
+const out = new URL('../../screenshots/', import.meta.url).pathname;
+await mkdir(out, { recursive: true });
+const srv = await start(PORT); const br = await launch();
+try {
+  const dismiss = (p) => p.eval(`document.querySelector('[data-consent=essential]')?.click(); true`);
+  const fresh = async (opts) => { const p = await br.newPage(opts); await p.goto(U('/robots.txt')); await p.eval('localStorage.clear();sessionStorage.clear();true'); return p; };
+
+  let p = await fresh({ width: 1440, height: 900 });
+  await p.goto(U('/')); await dismiss(p); await p.shot(out + '01-desktop-homepage.png'); await p.shot(out + '01-desktop-homepage-full.png', { full: true });
+
+  p = await fresh({ width: 390, height: 844, mobile: true, scale: 2 });
+  await p.goto(U('/menu/?table=12')); await dismiss(p); await p.shot(out + '02-mobile-menu.png');
+  await p.click('[data-open-qr]'); await p.waitFor(`document.querySelector('#qr-dialog').open`); await p.shot(out + '02b-mobile-menu-qr.png');
+
+  p = await fresh({ width: 390, height: 844, mobile: true, scale: 2 });
+  await p.goto(U('/en/order/')); await dismiss(p); await p.waitFor(`document.querySelector('[data-add]')`);
+  for (const [id, opt] of [['saganaki'], ['tzatziki'], ['meat-platter', 'p4']]) {
+    await p.click(`[data-add="${id}"]`); await p.waitFor(`document.querySelector('#item-dialog').open`);
+    if (opt) await p.click(`#item-dialog input[value="${opt}"]`); await p.click('#d-add'); await p.waitFor(`!document.querySelector('#item-dialog').open`);
+  }
+  await p.fill('#f-name', 'Maria P.'); await p.fill('#f-phone', '694 123 4567');
+  await p.eval(`document.querySelector('#cart').scrollIntoView(); true`); await new Promise((r) => setTimeout(r, 200));
+  await p.shot(out + '03-mobile-checkout-cart.png');
+
+  p = await fresh({ width: 1440, height: 900 });
+  await p.goto(U('/en/admin/')); await dismiss(p);
+  await p.fill('#a-user', 'owner'); await p.fill('#a-pass', 'owner-demo'); await p.click('#login button[type=submit]');
+  await p.waitFor('document.querySelector("#sim")');
+  for (let i = 0; i < 5; i++) await p.click('#sim');
+  await p.eval(`(()=>{const c=document.querySelectorAll('.ord [data-act=confirmed]');c[0].click();return true})()`);
+  await p.eval(`(()=>{const c=document.querySelector('.ord [data-act=confirmed]');c&&c.click();return true})()`);
+  await p.eval(`(()=>{const c=document.querySelector('#col-confirmed ~ .ord [data-act=preparing]');c&&c.click();return true})()`);
+  await new Promise((r) => setTimeout(r, 300)); await p.shot(out + '04-staff-incoming-orders.png');
+
+  p = await fresh({ width: 1440, height: 900 });
+  await p.goto(U('/events/')); await dismiss(p); await p.shot(out + '05-events.png', { full: true });
+  console.log('screenshots written to', out);
+} finally { br.close(); srv.close(); }

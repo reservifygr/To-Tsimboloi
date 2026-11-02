@@ -1,0 +1,19 @@
+{
+  "name": "to-tsimboloi-demo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DEMO ONLY - bilingual restaurant site and pickup-ordering demo for To Tsimboloi. Zero runtime dependencies.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "serve": "node scripts/serve.mjs",
+    "dev": "node scripts/build.mjs && node scripts/serve.mjs",
+    "test": "node --test \"tests/unit/*.test.mjs\"",
+    "test:e2e": "node scripts/build.mjs && node --test tests/e2e/run.mjs",
+    "shots": "node scripts/build.mjs && node tests/e2e/screenshots.mjs",
+    "check": "npm test && npm run test:e2e"
+  }
+}
