@@ -8,7 +8,7 @@ export const T = (path, vars) => fmt(t(lang, path), vars);
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
-export const route = (r) => `${base}${lang === 'en' ? '/en/' : '/'}${r ? r + '/' : ''}`;
+export const route = (r) => `${base}${lang === 'en' ? '/en/' : '/'}${r ? r + '/' : ''}${document.body.dataset.relative ? 'index.html' : ''}`;
 
 let backing = null;
 try { backing = window.localStorage; backing.getItem('tsb.probe'); } catch { backing = null; }

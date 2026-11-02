@@ -26,7 +26,7 @@ npm run test:e2e     # 15 end-to-end tests in headless Chrome (set CHROME_PATH i
 npm run shots        # regenerate screenshots/
 ```
 
-Build options (environment variables): `SITE_URL` (canonical origin, default `https://tsimboloi-demo.example`), `BASE` (sub-path, e.g. `/To-Tsimboloi` for GitHub Pages), `INDEXABLE=1` (allow search indexing; **off by default** so the demo is never indexed).
+Build options (environment variables): `RELATIVE=1` (relative links, so the site works from any folder or preview host), `SITE_URL` (canonical origin, default `https://tsimboloi-demo.example`), `BASE` (sub-path, e.g. `/To-Tsimboloi` for GitHub Pages), `INDEXABLE=1` (allow search indexing; **off by default** so the demo is never indexed).
 
 ### Demo credentials (public fixture, not a secret)
 

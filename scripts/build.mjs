@@ -16,12 +16,24 @@ await cp(join(root, 'src/shared'), join(out, 'assets/shared'), { recursive: true
 await cp(join(root, 'src/styles/site.css'), join(out, 'assets/site.css'));
 for (const f of await readdir(join(root, 'src/client'))) if (f.endsWith('.js')) await cp(join(root, 'src/client', f), join(out, 'assets', f));
 
+// RELATIVE=1: rewrite root-absolute links so the site works from any folder or file host (e.g. a shared preview link).
+function relativise(html, depth) {
+  const pre = depth ? '../'.repeat(depth) : './';
+  return html
+    .replace(/(href|src)="\/(?!\/)/g, `$1="${pre}`)
+    .replace(/href="((?:\.\.\/|\.\/)[^"#?]*\/)(?=["#?])/g, 'href="$1index.html')
+    .replace(/href="\.\/(?=["#?])/g, 'href="./index.html')
+    .replace(/data-base=""/, `data-base="${pre.replace(/\/$/, '')}" data-relative="1"`);
+}
+
 let count = 0;
 for (const lang of ['el', 'en']) {
   for (const route of ROUTES) {
     const dir = join(out, lang === 'en' ? 'en' : '', route);
     await mkdir(dir, { recursive: true });
-    await writeFile(join(dir, 'index.html'), renderPage(c, lang, route));
+    let html = renderPage(c, lang, route);
+    if (process.env.RELATIVE === '1') html = relativise(html, (lang === 'en' ? 1 : 0) + (route ? 1 : 0));
+    await writeFile(join(dir, 'index.html'), html);
     count++;
   }
 }
