@@ -16,7 +16,7 @@ after(() => { br?.close(); srv?.close(); });
 async function page(opts) {
   const p = await br.newPage(opts);
   await p.goto(U('/robots.txt'));
-  await p.eval('localStorage.clear(); sessionStorage.clear(); true');
+  await p.eval("localStorage.clear(); sessionStorage.clear(); localStorage.setItem('tsb.embeds','\"off\"'); true");
   return p;
 }
 const clean = (p) => assert.deepEqual(p.logs, [], 'browser console must be clean:\n' + p.logs.join('\n'));

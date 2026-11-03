@@ -3,6 +3,7 @@ import { eur } from './shared/money.js';
 import { L } from './shared/strings.js';
 import { emptyCart, addLine, setQty, removeLine, totals, MAX_QTY_PER_LINE, MAX_NOTE_LENGTH } from './shared/cart.js';
 import { pickupMode } from './shared/hours.js';
+import { spy } from './spy.js';
 
 const CART_KEY = 'tsb.cart.v1';
 const IDEM_KEY = 'tsb.idem.v1';
@@ -104,6 +105,7 @@ function renderMenu() {
     return items ? `<section class="o-cat" id="o-${c.id}"><h2>${esc(L(c.name, lang))}</h2>${items}</section>` : '';
   }).join('');
   $$('[data-add]').forEach((b) => b.addEventListener('click', () => openItemDialog(b.dataset.add, b)));
+  spy('#o-tabs a', '.o-cat');
 }
 
 function openItemDialog(itemId, opener) {

@@ -1,11 +1,24 @@
 // Instagram-style post cards + carousels. Cards link OUT to Instagram; nothing from Instagram is embedded.
-import { $, $$, adapter } from './core.js';
+import { $, $$, adapter, storage } from './core.js';
 
 export function initSocial(root = document) {
   const imgs = adapter.getImages();
   $$('.post[data-post]', root).forEach((card) => {
     const src = imgs[`post:${card.dataset.post}`];
-    if (!src) return;
+    if (!src) {
+      // No uploaded image: show the real post through Instagram's own embed (loaded lazily, only near the viewport).
+      if (storage.get('tsb.embeds', 'on') === 'off') return;
+      const media = $('[data-post-media]', card);
+      const f = document.createElement('iframe');
+      f.src = `https://www.instagram.com/p/${card.dataset.post}/embed/`;
+      f.loading = 'lazy';
+      f.title = 'Instagram';
+      f.setAttribute('scrolling', 'no');
+      f.referrerPolicy = 'strict-origin-when-cross-origin';
+      media.append(f);
+      card.classList.add('embedded');
+      return;
+    }
     const media = $('[data-post-media]', card);
     if (!$('.post-img', media)) {
       const img = new Image();

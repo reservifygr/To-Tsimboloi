@@ -58,7 +58,7 @@ function footer(c, lang) {
       <p>${esc(lang === 'el' ? VENUE.street + ', ' + VENUE.city : VENUE.streetEn + ', ' + VENUE.cityEn)}</p>
       <p><a href="tel:${VENUE.phoneTel}">${esc(VENUE.phoneDisplay)}</a></p><p class="muted">${esc(t(lang, 'footer.hours'))}</p></div>
     <div><ul class="foot-links">${NAV.slice(1).map((r) => `<li><a href="${pathFor(c, lang, r)}">${esc(t(lang, 'nav.' + NAV_KEY[r]))}</a></li>`).join('')}<li><a href="${pathFor(c, lang, 'privacy')}">${esc(t(lang, 'footer.privacy'))}</a></li><li><a href="${VENUE.instagram.url}" target="_blank" rel="noopener me">${esc(t(lang, 'footer.instagram'))}</a></li></ul></div>
-    <div class="muted small"><p>${esc(t(lang, 'footer.rights'))}</p><p>${esc(t(lang, 'footer.by'))}. <a href="${pathFor(c, lang, 'admin')}" rel="nofollow">Staff demo</a></p></div>
+    <div class="muted small"><p>${esc(t(lang, 'footer.rights'))}</p><p>${esc(t(lang, 'footer.by'))}. <a href="${pathFor(c, lang, 'admin')}" rel="nofollow">${lang === 'el' ? 'Διαχείριση (demo)' : 'Staff admin (demo)'}</a></p></div>
   </div>
 </footer>`;
 }
@@ -148,7 +148,7 @@ function eventFeature(c, lang, e, { compact = false } = {}) {
   <div class="ef-poster"><img src="${c.base}${e.poster}" alt="${esc(imgAlt)}" width="636" height="844" loading="${compact ? 'lazy' : 'eager'}"></div>
   <div class="ef-copy">
     <div class="date-badge" aria-hidden="true"><span>${esc(monShort(lang, e.date))}</span><b>${dayNum(e.date)}</b></div>
-    <p class="kicker">${esc(t(lang, compact ? 'home.nextKicker' : 'events.nextTitle'))}</p>
+    <p class="kicker"><span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>${esc(t(lang, compact ? 'home.nextKicker' : 'events.nextTitle'))}</p>
     <h2 class="ef-title">${esc(longDate(lang, e.date))}</h2>
     <p class="ef-time">${esc(fmt(t(lang, 'events.from'), { t: e.time }))} <span class="countdown" data-countdown="${e.date}T${e.time}:00+02:00" data-today="${esc(t(lang, 'home.nextToday'))}" data-tomorrow="${esc(t(lang, 'home.nextTomorrow'))}" data-in="${esc(t(lang, 'home.nextIn'))}"></span></p>
     <p class="ef-lineup-h">${esc(t(lang, 'events.lineup'))}</p>
@@ -177,11 +177,10 @@ function menuSection(lang) {
 
 /* ---------- pages ---------- */
 const gallery = (c, lang) => [
-  ['interior.webp', lang === 'el' ? 'Το εσωτερικό του μαγαζιού με ξύλινα τραπέζια και βαρέλια' : 'The dining room with wooden tables and barrels', 'g-wide'],
+  ['interior.webp', lang === 'el' ? 'Το εσωτερικό του μαγαζιού με ξύλινα τραπέζια και βαρέλια' : 'The dining room with wooden tables and barrels', 'g-big'],
   ['salad-feta.webp', lang === 'el' ? 'Σαλάτα με φέτα' : 'Salad with feta', ''],
-  ['live-music-sign.webp', lang === 'el' ? 'Φωτεινή επιγραφή Live music πάνω από τη σκηνή' : 'Live music neon sign above the stage', 'g-tall'],
   ['pan-snails.webp', lang === 'el' ? 'Πιάτο που σερβίρεται σε τηγάνι' : 'A dish served in a pan', ''],
-  ['plates-salad.webp', lang === 'el' ? 'Πιάτα μεζέδων στο τραπέζι' : 'Meze plates on the table', ''],
+  ['plates-salad.webp', lang === 'el' ? 'Πιάτα μεζέδων στο τραπέζι' : 'Meze plates on the table', 'g-wide'],
 ].map(([f, alt, cls]) => `<figure class="g-item ${cls} reveal"><img src="${c.base}/images/${f}" alt="${esc(alt)}" loading="lazy" width="900" height="900"></figure>`).join('');
 
 function homePage(c, lang) {
@@ -194,6 +193,7 @@ function homePage(c, lang) {
 <section class="hero2" data-hero>
   <img class="hero-bg" src="${c.base}/images/interior.webp" alt="" width="1600" height="1067" fetchpriority="high" data-parallax>
   <div class="hero-veil"></div>
+  <div class="notes" aria-hidden="true">${[0, 1, 2, 3, 4, 5].map((i) => `<svg class="note n${i}" viewBox="0 0 24 24"><path fill="currentColor" d="${i % 2 ? 'M9 17V5l10-2v12.2A3 3 0 1 1 17 13V6.3L11 7.5V17a3 3 0 1 1-2-2.8z' : 'M12 3v10.6A4 4 0 1 0 14 17V7h4V3z'}"/></svg>`).join('')}</div>
   <div class="wrap hero-grid">
     <div class="hero-copy">
       <p class="kicker hero-in" style="--d:.05s">${esc(t(lang, 'home.heroKicker'))}</p>
@@ -245,7 +245,8 @@ ${next ? `<section class="section next-night"><div class="wrap">${eventFeature(c
   <article class="card reveal"><p class="kicker">${esc(t(lang, 'home.offerKicker'))}</p><h3>${esc(t(lang, 'home.offerTitle'))}</h3><p>${esc(t(lang, 'home.offerP'))}</p><span class="tag">${esc(t(lang, 'offers.existing'))}</span><br><a class="link" href="${pathFor(c, lang, 'offers')}">${esc(t(lang, 'home.offerLink'))} ${arrow}</a></article>
 </div></section>
 
-<section class="section dark visit"><div class="wrap split">
+<svg class="wave" viewBox="0 0 1440 46" preserveAspectRatio="none" aria-hidden="true" style="margin-bottom:-1px"><path d="M0 46V22C180 2 360 4 540 20s360 26 540 6 270-16 360-8v28z"/></svg>
+<section class="section dark visit" style="padding-top:2.5rem"><div class="wrap split">
   <div><p class="kicker">${esc(t(lang, 'home.visitKicker'))}</p><h2 class="reveal">${esc(t(lang, 'home.visitTitle'))}</h2>
   <p><a class="big-phone" href="tel:${VENUE.phoneTel}">${esc(VENUE.phoneDisplay)}</a></p>
   <h3 class="h-small">${esc(t(lang, 'home.hoursTitle'))}</h3><p>${esc(t(lang, 'home.hoursPending'))}</p>

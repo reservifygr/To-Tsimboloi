@@ -18,7 +18,7 @@ export const EXTRA = {
     },
     social: {
       open: 'Άνοιγμα στο Instagram', posted: 'Δημοσίευση {d}', soon: 'Φωτογραφία σύντομα', video: 'Βίντεο', follow: 'Ακολουθήστε μας στο Instagram',
-      prev: 'Προηγούμενες δημοσιεύσεις', next: 'Επόμενες δημοσιεύσεις', carousel: 'Δημοσιεύσεις Instagram', note: 'Οι δημοσιεύσεις ανοίγουν στο Instagram. Δεν φορτώνεται κώδικας τρίτων στη σελίδα.',
+      prev: 'Προηγούμενες δημοσιεύσεις', next: 'Επόμενες δημοσιεύσεις', carousel: 'Δημοσιεύσεις Instagram', note: 'Οι δημοσιεύσεις φορτώνονται από το Instagram (υπηρεσία τρίτου) και ανοίγουν εκεί.',
     },
     events: {
       title: 'Live μουσική & Εκδηλώσεις | Το Τσιμπολόι',
@@ -91,7 +91,7 @@ export const EXTRA = {
     },
     social: {
       open: 'Open on Instagram', posted: 'Posted {d}', soon: 'Photo coming soon', video: 'Video', follow: 'Follow us on Instagram',
-      prev: 'Previous posts', next: 'Next posts', carousel: 'Instagram posts', note: 'Posts open on Instagram. No third-party code loads on this page.',
+      prev: 'Previous posts', next: 'Next posts', carousel: 'Instagram posts', note: 'Posts are loaded from Instagram (a third-party service) and open there.',
     },
     events: {
       title: 'Live Music & Events | To Tsimboloi',

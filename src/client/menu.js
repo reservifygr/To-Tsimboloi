@@ -1,6 +1,7 @@
 import { lang, T, $, $$, adapter, esc } from './core.js';
 import { eur } from './shared/money.js';
 import { menuQr } from './qrtools.js';
+import { spy } from './spy.js';
 
 // Apply staff overrides (price, sold out, hidden, images) from the demo adapter to the pre-rendered menu.
 const menu = adapter.getMenu();
@@ -30,13 +31,7 @@ $$('.menu-cat').forEach((sec) => {
 });
 
 // Highlight the category currently in view
-const links = new Map($$('.cat-nav a').map((a) => [a.getAttribute('href').slice(1), a]));
-if ('IntersectionObserver' in window) {
-  const io = new IntersectionObserver((entries) => entries.forEach((en) => {
-    if (en.isIntersecting) { links.forEach((a) => a.classList.remove('active')); links.get(en.target.id)?.classList.add('active'); }
-  }), { rootMargin: '-30% 0px -60% 0px' });
-  $$('.menu-cat').forEach((s) => io.observe(s));
-}
+spy('.cat-nav a', '.menu-cat');
 
 // Table QR support: /menu/?table=12 shows a table chip. It is display only: the QR menu has no ordering.
 const table = new URLSearchParams(location.search).get('table');
