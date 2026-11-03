@@ -7,7 +7,7 @@ import { createOrder, transition, OrderError, ACTIVE_STATUSES } from './orders.j
 
 export const MODE = 'demo'; // 'demo' | 'production' - production is intentionally not implemented in this repo
 
-const K = { orders: 'tsb.demo.orders.v1', settings: 'tsb.demo.settings.v1', seq: 'tsb.demo.seq.v1', log: 'tsb.demo.eventlog.v1', images: 'tsb.demo.images.v1' };
+const K = { orders: 'tsb.demo.orders.v1', settings: 'tsb.demo.settings.v1', seq: 'tsb.demo.seq.v1', log: 'tsb.demo.eventlog.v1', images: 'tsb.demo.images.v1', customers: 'tsb.demo.customers.v1' };
 export const DEFAULT_SETTINGS = { paused: false, prepMinutes: 25, takeaway: true, delivery: true, overrides: {} };
 
 /** Storage with an in-memory fallback (private mode / blocked storage / Node tests). */
@@ -67,11 +67,11 @@ export class DemoAdapter {
   }
 
   /** Optimistic-concurrency status change; throws OrderError(STALE_VERSION|BAD_TRANSITION|FORBIDDEN...). */
-  changeStatus(id, to, { actor, role, expectedVersion, reason }) {
+  changeStatus(id, to, { actor, role, expectedVersion, reason, etaMinutes }) {
     const orders = this.listOrders();
     const idx = orders.findIndex((o) => o.id === id);
     if (idx < 0) throw new OrderError('NOT_FOUND', `Order ${id} not found`);
-    const updated = transition(orders[idx], to, { actor, role, expectedVersion, reason, now: this.clock() });
+    const updated = transition(orders[idx], to, { actor, role, expectedVersion, reason, etaMinutes, now: this.clock() });
     const next = orders.slice();
     next[idx] = updated;
     this.s.set(K.orders, next);
@@ -79,8 +79,21 @@ export class DemoAdapter {
     return updated;
   }
 
+  /** Saved regular customers (name, phone, delivery address, notes). Keyed by normalised phone number. */
+  listCustomers() { return this.s.get(K.customers, []); }
+  saveCustomer(c) {
+    const phone = String(c.phone ?? '').replace(/[^\d+]/g, '');
+    const name = String(c.name ?? '').trim();
+    if (!name || phone.length < 10) throw new OrderError('BAD_CUSTOMER', 'A name and a phone number are required');
+    const rec = { phone, name, address: c.address ?? null, notes: String(c.notes ?? '').slice(0, 200), savedAt: new Date(this.clock()).toISOString() };
+    this.s.set(K.customers, [rec, ...this.listCustomers().filter((x) => x.phone !== phone)]);
+    this.#log('customer_saved', { phone });
+    return rec;
+  }
+  deleteCustomer(phone) { this.s.set(K.customers, this.listCustomers().filter((x) => x.phone !== phone)); this.#log('customer_deleted', { phone }); }
+
   activeOrders() { return this.listOrders().filter((o) => ACTIVE_STATUSES.includes(o.status)); }
-  resetDemo() { [K.orders, K.settings, K.seq, K.log, K.images].forEach((k) => this.s.remove(k)); }
+  resetDemo() { [K.orders, K.settings, K.seq, K.log, K.images, K.customers].forEach((k) => this.s.remove(k)); }
   eventLog() { return this.s.get(K.log, []); }
   #log(type, data) {
     const log = this.s.get(K.log, []);

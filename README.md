@@ -142,3 +142,12 @@ DNS/domain · order database + server API · real staff authentication · notifi
 
 ### Still needed from the owner
 Menu photos and the full drinks list, Instagram images/videos with captions and dates, confirmed opening hours, delivery area/fees/logistics, real payment provider.
+
+## V3: admin and ordering flow
+
+- **Incoming order popup.** A new order opens a dialog with the order, an approximate time (quick chips or any 1-240 minutes, chosen per order) and Accept / Reject (a reason is required). "Later" keeps the order waiting; a bar reopens it. The time is stored on the order (`etaMinutes`, `etaAt`), shown on the board, the slip and the customer's confirmation.
+- **Sound.** A soft two-note chime plays when an order arrives and repeats every 10 seconds until all pending orders are answered. Browsers only allow sound after a click, so the login click enables it; after a page reload the first click re-enables it.
+- **Archive.** Orders tab > Archive: completed, rejected and cancelled orders with search, details, receipt print / courier email / copy.
+- **Customers.** "Save customer" on any order stores name, phone, delivery address and notes in the Customers tab (regular badge on their orders). Customers can also tick "Remember my details on this device" at checkout; that data stays in their own browser.
+- **Checkout.** The order page keeps a small cart with a Checkout button (a floating button on phones). The details form opens as a dialog, so nobody scrolls to the bottom of the menu.
+- **Courier email.** "Email to courier" opens the staff member's mail app with the order slip addressed to the courier email set in Settings. The demo sends nothing itself; production would send through an email service.

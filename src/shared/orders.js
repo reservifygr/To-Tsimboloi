@@ -145,7 +145,7 @@ function normalisePickup(p = {}) {
  * @param {Order} order @param {OrderStatus} to @param {{actor:string,role:StaffRole,expectedVersion:number,reason?:string,now:number|Date|string}} ctx
  * @returns {Order}
  */
-export function transition(order, to, { actor, role, expectedVersion, reason, now }) {
+export function transition(order, to, { actor, role, expectedVersion, reason, now, etaMinutes }) {
   if (expectedVersion !== order.version) {
     throw new OrderError('STALE_VERSION', `Order changed (you saw v${expectedVersion}, now v${order.version}). Refresh and retry.`);
   }
@@ -157,10 +157,18 @@ export function transition(order, to, { actor, role, expectedVersion, reason, no
   if ((to === 'rejected' || to === 'cancelled') && !String(reason ?? '').trim()) {
     throw new OrderError('REASON_REQUIRED', 'A reason is required to reject or cancel');
   }
+  let eta = {};
+  if (etaMinutes !== undefined && etaMinutes !== null && etaMinutes !== '') {
+    const n = Number(etaMinutes);
+    if (!Number.isInteger(n) || n < 1 || n > 240) throw new OrderError('BAD_ETA', 'Time must be 1-240 minutes');
+    // Per-order promise made by the venue when it accepts: minutes from now, plus the absolute time.
+    eta = { etaMinutes: n, etaAt: new Date(new Date(now).getTime() + n * 60000).toISOString() };
+  }
   return {
     ...order,
+    ...eta,
     status: to,
     version: order.version + 1,
-    audit: [...order.audit, { at: new Date(now).toISOString(), actor, from: order.status, to, ...(reason ? { reason: String(reason).trim() } : {}) }],
+    audit: [...order.audit, { at: new Date(now).toISOString(), actor, from: order.status, to, ...(reason ? { reason: String(reason).trim() } : {}), ...(eta.etaMinutes ? { etaMinutes: eta.etaMinutes } : {}) }],
   };
 }

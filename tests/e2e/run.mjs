@@ -98,6 +98,11 @@ test('menu page is usable with JavaScript disabled (raw HTML)', async () => {
   assert.ok(en.includes('Saganaki') && en.includes('Beers') && en.includes('Wine by the bottle'));
 });
 
+async function openCheckout(p, mobile = false) {
+  await p.click(mobile ? '#cart-fab' : '#open-checkout');
+  await p.waitFor(`document.querySelector('#co-dialog').open`);
+}
+
 async function addItem(p, id, { opt, qty, note } = {}) {
   await p.click(`[data-add="${id}"]`);
   await p.waitFor(`document.querySelector('#item-dialog').open`);
@@ -127,6 +132,7 @@ test('order: cart math, options, notes, validation, manual pickup fallback, demo
   // +/- and remove
   await p.eval(`document.querySelector('.cart-line [data-inc]').click()`);
   assert.match(await p.text('#cart-total'), /54\.00/);
+  await openCheckout(p, true); // the details form opens from a button, nobody scrolls to the bottom of the menu
   // hours are unverified -> manual pickup request, not a slot picker
   assert.equal(await p.eval(`document.querySelector('#f-pickup').tagName`), 'INPUT');
   assert.match(await p.text('#pickup-box'), /not yet verified/i);
@@ -168,17 +174,20 @@ test('admin: fixture login, role gating, order lifecycle, race protection, pause
   await p.click('#sim'); await p.click('#sim');
   assert.equal(await p.count('.ord'), 2);
   assert.equal(await p.count('#col-pending ~ .ord'), 2);
-  // confirm -> preparing -> ready -> collected
-  const firstId = await p.eval(`document.querySelector('.ord').dataset.id`);
-  for (const to of ['confirmed', 'preparing', 'ready', 'collected']) {
+  // a new order opens the popup; the venue gives THIS order its own time
+  await p.waitFor(`document.querySelector('#incoming').open`);
+  const firstId = await p.eval(`document.querySelector('#incoming').dataset.id`);
+  await p.fill('#eta', '35'); await p.click('#in-accept');
+  for (const to of ['preparing', 'ready', 'collected']) {
     await p.eval(`document.querySelector('.ord[data-id="${firstId}"] [data-act="${to}"]').click()`);
   }
   const st = await p.eval(`JSON.parse(localStorage.getItem('tsb.demo.orders.v1')).find(o=>o.id==='${firstId}')`);
-  assert.equal(st.status, 'collected'); assert.equal(st.version, 5); assert.equal(st.audit.length, 5);
+  assert.equal(st.status, 'collected'); assert.equal(st.version, 5); assert.equal(st.audit.length, 5); assert.equal(st.etaMinutes, 35);
   // race: another "device" changes the order after this screen rendered; the stale click is rejected
-  const secondId = await p.eval(`document.querySelectorAll('.ord')[0].dataset.id`);
+  await p.waitFor(`document.querySelector('#incoming').open`);
+  const secondId = await p.eval(`document.querySelector('#incoming').dataset.id`);
   await p.eval(`(()=>{const k='tsb.demo.orders.v1';const a=JSON.parse(localStorage.getItem(k));const o=a.find(x=>x.id==='${secondId}');o.version+=1;o.status='confirmed';localStorage.setItem(k,JSON.stringify(a));return true})()`);
-  await p.eval(`document.querySelector('.ord[data-id="${secondId}"] [data-act="confirmed"]')?.click()`);
+  await p.click('#in-accept');
   await p.waitFor(`document.querySelector('.toast')`);
   assert.match(await p.text('.toast'), /another device|άλλη συσκευή/);
   // pause + prep time + price edit (owner)
@@ -201,17 +210,111 @@ test('admin: fixture login, role gating, order lifecycle, race protection, pause
   clean(p);
 });
 
-test('admin: sound is off until a user click enables it (no AudioContext before activation)', async () => {
+test('admin: soft chime repeats every 10 s until the order is answered; sound needs a click after a reload', async () => {
   const p = await page({ width: 1440, height: 900 });
   await p.goto(U('/admin/'));
-  await p.eval(`window.__ac=0;const AC=window.AudioContext;window.AudioContext=function(...a){window.__ac++;return new AC(...a)};true`);
+  const hook = `window.__ac=0;window.__osc=0;const AC=window.AudioContext;window.AudioContext=function(...a){window.__ac++;const c=new AC(...a);const o=c.createOscillator.bind(c);c.createOscillator=()=>{window.__osc++;return o()};return c};true`;
+  await p.eval(hook);
+  assert.equal(await p.eval('window.__ac'), 0);
   await p.fill('#a-user', 'staff'); await p.fill('#a-pass', 'staff-demo'); await p.click('#login button[type=submit]');
   await p.waitFor(`document.querySelector('#snd')`);
+  assert.equal(await p.eval('window.__ac'), 1); // created by the login click, never before
+  assert.equal(await p.eval(`document.querySelector('#snd').getAttribute('aria-pressed')`), 'true');
   await p.click('#sim');
+  await p.waitFor(`window.__osc>=2`, 5000);
+  const n1 = await p.eval('window.__osc');
+  await p.waitFor(`window.__osc>=${n1 + 2}`, 13000); // repeats about every 10 seconds
+  await p.waitFor(`document.querySelector('#incoming').open`);
+  await p.click('#in-accept'); // answered: the alarm stops
+  await p.waitFor(`!document.querySelector('#incoming').open`);
+  const n2 = await p.eval('window.__osc');
+  await new Promise((r) => setTimeout(r, 11500));
+  assert.equal(await p.eval('window.__osc'), n2);
+  // after a reload the browser forgets: sound shows as off until the first click
+  await p.goto(U('/admin/'));
+  await p.eval(hook);
+  await p.waitFor(`document.querySelector('#snd')`);
   assert.equal(await p.eval('window.__ac'), 0);
   assert.equal(await p.eval(`document.querySelector('#snd').getAttribute('aria-pressed')`), 'false');
-  await p.realClick('#snd'); // a genuine pointer gesture, which is what browsers require for audio
-  assert.equal(await p.eval('window.__ac'), 1);
+  clean(p);
+});
+
+test('admin: incoming popup (own time, reject with reason, later), archive search, saved customers', async () => {
+  const p = await page({ width: 1440, height: 900 });
+  await p.goto(U('/en/admin/'));
+  await p.fill('#a-user', 'owner'); await p.fill('#a-pass', 'owner-demo'); await p.click('#login button[type=submit]');
+  await p.waitFor(`document.querySelector('#sim')`);
+  await p.click('#sim');
+  await p.waitFor(`document.querySelector('#incoming').open`);
+  await p.click('#in-later');
+  await p.waitFor(`!document.querySelector('#incoming').open && document.querySelector('.alert-bar')`);
+  await p.click('#open-in');
+  await p.waitFor(`document.querySelector('#incoming').open`);
+  await p.click('#in-later');
+  await p.waitFor(`!document.querySelector('#incoming').open`);
+  await p.click('#sim'); // second simulated order is a delivery
+  await p.waitFor(`document.querySelector('#incoming').open`);
+  assert.equal(await p.eval(`document.querySelector('#eta').value`), '40'); // 25 default + 15 for delivery: a suggestion, not a flat rate
+  const delId = await p.eval(`document.querySelector('#incoming').dataset.id`);
+  await p.click('#in-reject');
+  await p.click('#rj-ok');
+  assert.match(await p.text('#rj-err'), /./); // a reason is required
+  await p.fill('#rj', 'We are full right now'); await p.click('#rj-ok');
+  const rej = await p.eval(`JSON.parse(localStorage.getItem('tsb.demo.orders.v1')).find(o=>o.id==='${delId}')`);
+  assert.equal(rej.status, 'rejected'); assert.equal(rej.audit.at(-1).reason, 'We are full right now');
+  await p.waitFor(`document.querySelector('#open-in')`); // the takeaway order was put off with "Later": a bar offers to reopen it
+  await p.click('#open-in');
+  await p.waitFor(`document.querySelector('#incoming').open`);
+  assert.equal(await p.eval(`document.querySelector('#eta').value`), '25');
+  await p.fill('#eta', '20'); await p.click('#in-accept');
+  await p.waitFor(`!document.querySelector('#incoming').open`);
+  const acc = await p.eval(`JSON.parse(localStorage.getItem('tsb.demo.orders.v1')).find(o=>o.status==='confirmed')`);
+  assert.equal(acc.etaMinutes, 20);
+  assert.match(await p.text('.ord[data-id="' + acc.id + '"] .eta'), /20 min/);
+  // archive: the rejected order lives there, with search
+  await p.click('[data-view="archive"]');
+  assert.equal(await p.count('.arch'), 1);
+  await p.fill('#arch-q', 'zzzz');
+  assert.equal(await p.count('.arch'), 0);
+  await p.fill('#arch-q', delId);
+  assert.equal(await p.count('.arch'), 1);
+  // saved customers: save from an order, see it in the Customers tab, delete it
+  await p.click('[data-view="active"]');
+  await p.eval(`document.querySelector('.ord[data-id="${acc.id}"] [data-savecust]').click()`);
+  await p.click('#tab-customers');
+  assert.equal(await p.count('.cust'), 1);
+  await p.click('[data-cdel]');
+  assert.equal(await p.count('.cust'), 0);
+  clean(p);
+});
+
+test('order: details form opens from a button; remembered details are optional and deletable; venue answer shows live', async () => {
+  const p = await page({ width: 1440, height: 900 });
+  await p.goto(U('/en/order/'));
+  await p.waitFor(`document.querySelector('[data-add]')`);
+  await addItem(p, 'tzatziki');
+  await p.eval('window.scrollTo(0, 3000)');
+  assert.equal(await p.eval(`(()=>{const r=document.querySelector('#open-checkout').getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight})()`), true);
+  assert.equal(await p.eval(`document.querySelector('#co-dialog').open`), false);
+  await openCheckout(p);
+  await p.fill('#f-name', 'Eleni D.'); await p.fill('#f-phone', '694 123 4567'); await p.fill('#f-pickup', 'around 21:00');
+  await p.click('#f-remember');
+  await p.click('#submit');
+  await p.waitFor(`document.querySelector('#confirm')`);
+  assert.match(await p.text('#live-status'), /Waiting/);
+  // the venue accepts with its own time (written straight to demo storage here)
+  await p.eval(`(()=>{const k='tsb.demo.orders.v1';const a=JSON.parse(localStorage.getItem(k));a[0].status='confirmed';a[0].version=2;a[0].etaMinutes=25;a[0].etaAt=new Date(Date.now()+25*60000).toISOString();localStorage.setItem(k,JSON.stringify(a));return true})()`);
+  await p.waitFor(`/about 25 minutes/.test(document.querySelector('#live-status').textContent)`, 6000);
+  // next visit: details are filled in; one click deletes them
+  await p.goto(U('/en/order/'));
+  await p.waitFor(`document.querySelector('[data-add]')`);
+  await addItem(p, 'tzatziki');
+  await openCheckout(p);
+  assert.equal(await p.eval(`document.querySelector('#f-name').value`), 'Eleni D.');
+  assert.equal(await p.eval(`document.querySelector('#saved-row').hidden`), false);
+  await p.click('#forget');
+  assert.equal(await p.eval(`document.querySelector('#f-name').value`), '');
+  assert.equal(await p.eval(`localStorage.getItem('tsb.customer.v1')`), null);
   clean(p);
 });
 
@@ -286,6 +389,7 @@ test('order: delivery requires an address, card is a label only, order appears i
   await p.waitFor(`document.querySelector('[data-add]')`);
   await addItem(p, 'tzatziki', { qty: 1 });
   await p.click('[data-mode="delivery"]');
+  await openCheckout(p, true);
   assert.equal(await p.eval(`document.querySelector('#address-box').hidden`), false);
   await p.fill('#f-name', 'Nikos T.'); await p.fill('#f-phone', '694 123 4567'); await p.fill('#f-pickup', 'around 21:00');
   await p.eval(`document.querySelector('input[name=pay][value=card]').click()`);

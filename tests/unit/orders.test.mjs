@@ -161,3 +161,33 @@ test('delivery/takeaway can be switched off separately by staff; image store val
   a.removeImage('item:bread');
   assert.deepEqual(a.getImages(), {});
 });
+
+test('order: each order gets its own time when accepted; bad times are refused; rejection needs a reason', () => {
+  const o = mk();
+  const ctx = { actor: 'staff', role: 'staff', expectedVersion: 1, now: NOW };
+  const a = transition(o, 'confirmed', { ...ctx, etaMinutes: 35 });
+  assert.equal(a.etaMinutes, 35);
+  assert.equal(a.etaAt, new Date(NOW + 35 * 60000).toISOString());
+  assert.equal(a.audit.at(-1).etaMinutes, 35);
+  const b = transition(mk(), 'confirmed', { ...ctx, etaMinutes: 20 });
+  assert.notEqual(a.etaMinutes, b.etaMinutes);
+  for (const bad of [0, -5, 241, 12.5, 'soon']) assert.throws(() => transition(mk(), 'confirmed', { ...ctx, etaMinutes: bad }), (e) => e.code === 'BAD_ETA');
+  assert.throws(() => transition(mk(), 'rejected', ctx), (e) => e.code === 'REASON_REQUIRED');
+});
+
+test('adapter: accept stores the time; saved customers are keyed by phone, validated, replaceable and deletable', () => {
+  const ad = fresh();
+  const { order } = ad.submitOrder({ cart: cart(), customer, pickup, idempotencyKey: 'key-0002-abcd' });
+  const upd = ad.changeStatus(order.id, 'confirmed', { actor: 'staff', role: 'staff', expectedVersion: 1, etaMinutes: 45 });
+  assert.equal(ad.getOrder(order.id).etaMinutes, 45);
+  assert.equal(upd.status, 'confirmed');
+  assert.throws(() => ad.saveCustomer({ name: '', phone: '6941234567' }), (e) => e.code === 'BAD_CUSTOMER');
+  assert.throws(() => ad.saveCustomer({ name: 'A', phone: '123' }), (e) => e.code === 'BAD_CUSTOMER');
+  const addr = { street: 'Agiou Ioannou', number: '71', area: 'Agia Paraskevi', postcode: '15342' };
+  ad.saveCustomer({ name: 'Maria P.', phone: '+30 694 123 4567', address: addr, notes: 'rings twice' });
+  ad.saveCustomer({ name: 'Maria Papa', phone: '+306941234567', address: addr });
+  assert.equal(ad.listCustomers().length, 1);
+  assert.equal(ad.listCustomers()[0].name, 'Maria Papa');
+  ad.deleteCustomer('+306941234567');
+  assert.equal(ad.listCustomers().length, 0);
+});

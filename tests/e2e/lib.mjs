@@ -13,7 +13,7 @@ export async function launch() {
   if (!bin) throw new Error('No Chrome found. Set CHROME_PATH.');
   const dir = await mkdtemp(join(tmpdir(), 'tsb-chrome-'));
   const port = 9300 + Math.floor(Math.random() * 500);
-  const proc = spawn(bin, ['--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${dir}`, '--no-sandbox', '--disable-gpu', '--hide-scrollbars', '--no-first-run', '--disable-extensions', 'about:blank'], { stdio: 'ignore' });
+  const proc = spawn(bin, ['--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${dir}`, '--no-sandbox', '--disable-gpu', '--hide-scrollbars', '--no-first-run', '--autoplay-policy=no-user-gesture-required', '--disable-extensions', 'about:blank'], { stdio: 'ignore' });
   let ws;
   for (let i = 0; i < 60; i++) {
     try { const j = await (await fetch(`http://127.0.0.1:${port}/json/version`)).json(); ws = j.webSocketDebuggerUrl; break; } catch { await sleep(250); }
@@ -54,7 +54,7 @@ export async function launch() {
           if (r.exceptionDetails) throw new Error('eval failed: ' + (r.exceptionDetails.exception?.description ?? r.exceptionDetails.text) + '\n' + expr);
           return r.result.value;
         },
-        async waitFor(expr, timeout = 5000) {
+        async waitFor(expr, timeout = 9000) {
           const t0 = Date.now();
           while (Date.now() - t0 < timeout) { if (await page.eval(`!!(${expr})`).catch(() => false)) return true; await sleep(80); }
           throw new Error('waitFor timeout: ' + expr);

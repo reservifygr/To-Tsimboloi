@@ -1,4 +1,4 @@
-import { lang, T, $, $$, esc, adapter, storage, route, uuid, track, setFieldError, fmtTime } from './core.js';
+import { lang, T, $, $$, esc, adapter, storage, route, uuid, track, setFieldError, fmtTime, toast } from './core.js';
 import { eur } from './shared/money.js';
 import { L } from './shared/strings.js';
 import { emptyCart, addLine, setQty, removeLine, totals, MAX_QTY_PER_LINE, MAX_NOTE_LENGTH } from './shared/cart.js';
@@ -8,6 +8,7 @@ import { spy } from './spy.js';
 const CART_KEY = 'tsb.cart.v1';
 const IDEM_KEY = 'tsb.idem.v1';
 const MODE_KEY = 'tsb.mode.v1';
+const CUST_KEY = 'tsb.customer.v1'; // details the visitor chose to remember on this device only
 const root = $('#order-root');
 let cart = storage.get(CART_KEY, emptyCart());
 let mode = storage.get(MODE_KEY, 'takeaway'); // 'takeaway' | 'delivery'
@@ -25,7 +26,7 @@ function renderShell() {
   if (mode === 'delivery' && s.delivery === false && s.takeaway !== false) mode = 'takeaway';
   if (mode === 'takeaway' && s.takeaway === false && s.delivery !== false) mode = 'delivery';
   root.innerHTML = `<section aria-labelledby="mode-h"><h2 id="mode-h" class="h-small">${esc(T('order.fulfil'))}</h2>
-    <div class="seg" role="group" aria-labelledby="mode-h">
+    <div class="seg wide" role="group" aria-labelledby="mode-h">
       <button type="button" data-mode="takeaway" aria-pressed="${mode === 'takeaway'}" ${s.takeaway === false ? 'disabled' : ''}>${esc(T('order.takeaway'))}</button>
       <button type="button" data-mode="delivery" aria-pressed="${mode === 'delivery'}" ${s.delivery === false ? 'disabled' : ''}>${esc(T('order.delivery'))}</button></div>
     <p class="mode-hint" id="mode-hint"></p></section>
@@ -34,41 +35,81 @@ function renderShell() {
     <aside class="cart" id="cart" aria-labelledby="cart-h">
       <h2 id="cart-h">${esc(T('order.cart'))}</h2>
       <div id="cart-lines" aria-live="polite"></div>
-      <form id="checkout" novalidate>
-        <h3>${esc(T('order.yourDetails'))}</h3>
-        <div class="field"><label for="f-name">${esc(T('order.name'))}</label><input id="f-name" name="name" type="text" autocomplete="name" maxlength="80" required></div>
-        <div class="field"><label for="f-phone">${esc(T('order.phone'))}</label><input id="f-phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" required aria-describedby="f-phone-hint"><span class="hint" id="f-phone-hint">${esc(T('order.phoneHint'))}</span></div>
-        <fieldset id="address-box" ${mode === 'delivery' ? '' : 'hidden'}><legend class="h-small">${esc(T('order.address'))}</legend>
-          <div class="form-grid">
-            <div class="field"><label for="f-street">${esc(T('order.street'))}</label><input id="f-street" type="text" autocomplete="address-line1" maxlength="80"></div>
-            <div class="field"><label for="f-number">${esc(T('order.number'))}</label><input id="f-number" type="text" inputmode="numeric" maxlength="10"></div>
-            <div class="field"><label for="f-area">${esc(T('order.area'))}</label><input id="f-area" type="text" autocomplete="address-level2" maxlength="60"></div>
-            <div class="field"><label for="f-postcode">${esc(T('order.postcode'))}</label><input id="f-postcode" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="6"></div>
-            <div class="field"><label for="f-floor">${esc(T('order.floor'))}</label><input id="f-floor" type="text" maxlength="20"></div>
-            <div class="field"><label for="f-bell">${esc(T('order.bell'))}</label><input id="f-bell" type="text" maxlength="40"></div>
-          </div>
-          <div class="field"><label for="f-anotes">${esc(T('order.addrNotes'))}</label><input id="f-anotes" type="text" maxlength="120"></div>
-        </fieldset>
-        <div id="pickup-box"></div>
-        <fieldset class="field" id="pay-box"><legend class="h-small">${esc(T('order.payMethod'))}</legend>
-          <label class="radio-card"><input type="radio" name="pay" value="cash" checked><div><strong>${esc(T('order.cash'))}</strong><span>${esc(T('order.cashHint'))}</span></div></label>
-          <label class="radio-card"><input type="radio" name="pay" value="card"><div><strong>${esc(T('order.card'))}</strong><span>${esc(T('order.cardHint'))}</span></div></label>
-        </fieldset>
-        <p class="small muted" id="price-note">${esc(T('order.priceNote'))}</p>
-        <button class="btn btn-primary" id="submit" type="submit" style="width:100%">${esc(T('order.submit'))}</button>
-        <div id="form-msg" class="error" role="alert"></div>
-      </form>
+      <button class="btn btn-primary go" id="open-checkout" type="button" disabled>${esc(T('order.checkout'))}</button>
     </aside>
   </div>
-  <a class="cart-fab btn btn-primary" id="cart-fab" href="#cart" hidden></a>
+  <button class="cart-fab btn btn-primary" id="cart-fab" type="button" hidden></button>
+  <dialog class="dialog checkout-dialog" id="co-dialog" aria-labelledby="co-h">
+      <form id="checkout" novalidate>
+      <div class="co-head"><h2 id="co-h">${esc(T('order.checkoutTitle'))}</h2><button class="btn btn-ghost btn-sm" type="button" id="co-close">${esc(T('order.close'))}</button></div>
+      <div class="live-status" id="co-summary" aria-live="polite"></div>
+      <h3>${esc(T('order.yourDetails'))}</h3>
+      <p class="small" id="saved-row" hidden><span>${esc(T('order.usedSaved'))}</span> <button class="link-btn" type="button" id="forget">${esc(T('order.forget'))}</button></p>
+      <div class="field"><label for="f-name">${esc(T('order.name'))}</label><input id="f-name" name="name" type="text" autocomplete="name" maxlength="80" required></div>
+      <div class="field"><label for="f-phone">${esc(T('order.phone'))}</label><input id="f-phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" required aria-describedby="f-phone-hint"><span class="hint" id="f-phone-hint">${esc(T('order.phoneHint'))}</span></div>
+      <fieldset id="address-box" ${mode === 'delivery' ? '' : 'hidden'}><legend class="h-small">${esc(T('order.address'))}</legend>
+        <div class="form-grid">
+          <div class="field"><label for="f-street">${esc(T('order.street'))}</label><input id="f-street" type="text" autocomplete="address-line1" maxlength="80"></div>
+          <div class="field"><label for="f-number">${esc(T('order.number'))}</label><input id="f-number" type="text" inputmode="numeric" maxlength="10"></div>
+          <div class="field"><label for="f-area">${esc(T('order.area'))}</label><input id="f-area" type="text" autocomplete="address-level2" maxlength="60"></div>
+          <div class="field"><label for="f-postcode">${esc(T('order.postcode'))}</label><input id="f-postcode" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="6"></div>
+          <div class="field"><label for="f-floor">${esc(T('order.floor'))}</label><input id="f-floor" type="text" maxlength="20"></div>
+          <div class="field"><label for="f-bell">${esc(T('order.bell'))}</label><input id="f-bell" type="text" maxlength="40"></div>
+        </div>
+        <div class="field"><label for="f-anotes">${esc(T('order.addrNotes'))}</label><input id="f-anotes" type="text" maxlength="120"></div>
+      </fieldset>
+      <div id="pickup-box"></div>
+      <fieldset class="field" id="pay-box"><legend class="h-small">${esc(T('order.payMethod'))}</legend>
+        <label class="radio-card"><input type="radio" name="pay" value="cash" checked><div><strong>${esc(T('order.cash'))}</strong><span>${esc(T('order.cashHint'))}</span></div></label>
+        <label class="radio-card"><input type="radio" name="pay" value="card"><div><strong>${esc(T('order.card'))}</strong><span>${esc(T('order.cardHint'))}</span></div></label>
+      </fieldset>
+      <label class="remember"><input type="checkbox" id="f-remember"><span><strong>${esc(T('order.remember'))}</strong><br><span class="small muted">${esc(T('order.rememberHint'))}</span></span></label>
+      <p class="small muted" id="price-note">${esc(T('order.priceNote'))}</p>
+      <button class="btn btn-primary" id="submit" type="submit" style="width:100%">${esc(T('order.submit'))}</button>
+      <div id="form-msg" class="error" role="alert"></div>
+    </form>
+  </dialog>
   <dialog class="dialog" id="item-dialog" aria-labelledby="item-dialog-h"></dialog>`;
   $$('[data-mode]').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode)));
   $$('input[name=pay]').forEach((r) => r.addEventListener('change', () => { payment = r.value; }));
   renderMenu();
   $('#checkout').addEventListener('submit', onSubmit);
+  $('#open-checkout').addEventListener('click', openCheckout);
+  $('#cart-fab').addEventListener('click', openCheckout);
+  $('#co-close').addEventListener('click', () => $('#co-dialog').close());
+  $('#forget').addEventListener('click', forgetSaved);
+  prefill();
   $('#item-dialog').addEventListener('close', () => { if (!$('#item-dialog').open) $('#item-dialog').innerHTML = ''; });
   applyMode();
   renderCart();
+}
+
+function openCheckout() {
+  if (!cart.lines.length) return;
+  renderCart();
+  const dlg = $('#co-dialog');
+  if (!dlg.open) dlg.showModal();
+  ($('#f-name').value ? $('#submit') : $('#f-name')).focus();
+}
+
+function prefill() {
+  const c = storage.get(CUST_KEY, null);
+  if (!c) return;
+  const a = c.address ?? {};
+  const set = (id, v) => { const el = $(id); if (el && !el.value && v) el.value = v; };
+  set('#f-name', c.name); set('#f-phone', c.phone);
+  set('#f-street', a.street); set('#f-number', a.number); set('#f-area', a.area); set('#f-postcode', a.postcode);
+  set('#f-floor', a.floor); set('#f-bell', a.bell); set('#f-anotes', a.notes);
+  $('#f-remember').checked = true;
+  $('#saved-row').hidden = false;
+}
+
+function forgetSaved() {
+  storage.remove(CUST_KEY);
+  $$('#checkout input[type=text], #checkout input[type=tel]').forEach((i) => { if (i.id !== 'f-pickup') i.value = ''; });
+  $('#f-remember').checked = false;
+  $('#saved-row').hidden = true;
+  toast(T('order.forgotten'));
 }
 
 function setMode(m) {
@@ -160,9 +201,13 @@ function renderCart() {
       $('[data-rm]', row).addEventListener('click', () => mutate(() => removeLine(cart, key)));
     });
   }
+  $('#open-checkout').disabled = !tt.itemCount;
+  const sum = $('#co-summary');
+  if (sum) sum.textContent = `${tt.itemCount} × ${T('order.cart')} · ${eur(tt.subtotal, lang)}`;
   const fab = $('#cart-fab');
   fab.hidden = !tt.itemCount;
-  fab.textContent = `${T('order.cart')} (${tt.itemCount}) · ${eur(tt.subtotal, lang)}`;
+  fab.textContent = `${T('order.checkout')} (${tt.itemCount}) · ${eur(tt.subtotal, lang)}`;
+  if (!tt.itemCount && $('#co-dialog')?.open) $('#co-dialog').close();
 }
 function mutate(fn) { try { cart = fn(); saveCart(); renderCart(); } catch (e) { $('#form-msg').textContent = errText(e); } }
 
@@ -207,6 +252,8 @@ async function onSubmit(e) {
     if (!key) { key = uuid(); storage.set(IDEM_KEY, key); }
     const { order, duplicate } = adapter.submitOrder({ cart, customer: { name: $('#f-name').value, phone: $('#f-phone').value }, pickup, fulfilment, payment, idempotencyKey: key });
     storage.remove(IDEM_KEY);
+    if ($('#f-remember').checked) storage.set(CUST_KEY, { name: $('#f-name').value.trim(), phone: $('#f-phone').value.trim(), address: { street: $('#f-street').value.trim(), number: $('#f-number').value.trim(), area: $('#f-area').value.trim(), postcode: $('#f-postcode').value.trim(), floor: $('#f-floor').value.trim(), bell: $('#f-bell').value.trim(), notes: $('#f-anotes').value.trim() } });
+    else storage.remove(CUST_KEY);
     cart = emptyCart();
     saveCart();
     track('order_submitted_demo', { type: fulfilment.type, payment });
@@ -232,9 +279,25 @@ function showConfirmation(order, duplicate) {
   root.innerHTML = `<section class="success" role="status" tabindex="-1" id="confirm"><h2>${esc(T('order.confirmTitle'))}</h2>
   <p>${esc(duplicate ? T('order.confirmDup', { id: order.id }) : T('order.confirmText', { id: order.id, how }))}</p>
   <p><strong>${esc(eur(order.subtotal, lang))}</strong> · ${esc(T('order.payment'))}</p>
+  <p class="live-status" id="live-status" role="status">${esc(T('order.statusPending'))}</p>
   <p><button class="btn btn-primary" type="button" id="new-order">${esc(T('order.newOrder'))}</button> <a class="btn btn-ghost" href="${route('admin')}">${esc(T('order.viewAdmin'))}</a></p></section>`;
   $('#confirm').focus();
   $('#new-order').addEventListener('click', () => renderShell());
+  // Demo only: the venue's answer is read from this browser's storage. In production this would come from the server.
+  const timer = setInterval(() => {
+    const el = $('#live-status');
+    if (!el) { clearInterval(timer); return; }
+    const o = adapter.getOrder(order.id);
+    if (!o) return;
+    const why = o.audit.at(-1)?.reason ?? '';
+    const txt = {
+      pending: T('order.statusPending'),
+      confirmed: o.etaMinutes ? T('order.statusAccepted', { n: o.etaMinutes, t: fmtTime(o.etaAt) }) : T('order.statusProgress'),
+      preparing: T('order.statusProgress'), ready: T('order.statusReady'), collected: T('order.statusDone'),
+      rejected: T('order.statusRejected', { reason: why }), cancelled: T('order.statusCancelled', { reason: why }),
+    }[o.status];
+    if (txt && el.textContent !== txt) el.textContent = txt;
+  }, 1500);
 }
 
 renderShell();

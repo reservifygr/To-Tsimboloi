@@ -25,8 +25,11 @@ try {
     await p.click(`[data-add="${id}"]`); await p.waitFor(`document.querySelector('#item-dialog').open`);
     if (opt) await p.click(`#item-dialog input[value="${opt}"]`); await p.click('#d-add'); await p.waitFor(`!document.querySelector('#item-dialog').open`);
   }
-  await p.click('[data-mode="delivery"]'); await p.fill('#f-name', 'Maria P.'); await p.fill('#f-phone', '694 123 4567'); await p.fill('#f-street', 'Agiou Ioannou'); await p.fill('#f-number', '71');
-  await p.eval(`document.querySelector('#cart').scrollIntoView(); true`); await new Promise((r) => setTimeout(r, 200));
+  await p.click('[data-mode="delivery"]');
+  await new Promise((r) => setTimeout(r, 300)); await p.shot(out + '03a-mobile-order-page.png');
+  await p.click('#cart-fab'); await p.waitFor(`document.querySelector('#co-dialog').open`);
+  await p.fill('#f-name', 'Maria P.'); await p.fill('#f-phone', '694 123 4567'); await p.fill('#f-street', 'Agiou Ioannou'); await p.fill('#f-number', '71');
+  await new Promise((r) => setTimeout(r, 300));
   await p.shot(out + '03-mobile-checkout-cart.png');
 
   p = await fresh({ width: 1440, height: 900 });
@@ -34,10 +37,28 @@ try {
   await p.fill('#a-user', 'owner'); await p.fill('#a-pass', 'owner-demo'); await p.click('#login button[type=submit]');
   await p.waitFor('document.querySelector("#sim")');
   for (let i = 0; i < 5; i++) await p.click('#sim');
-  await p.eval(`(()=>{const c=document.querySelectorAll('.ord [data-act=confirmed]');c[0].click();return true})()`);
-  await p.eval(`(()=>{const c=document.querySelector('.ord [data-act=confirmed]');c&&c.click();return true})()`);
+  await p.waitFor(`document.querySelector('#incoming').open`); await new Promise((r) => setTimeout(r, 400));
+  await p.shot(out + '04a-admin-incoming-popup.png');
+  for (const eta of ['20', '35', '50']) {
+    await p.waitFor(`document.querySelector('#incoming').open`);
+    await p.fill('#eta', eta); await p.click('#in-accept'); await new Promise((r) => setTimeout(r, 250));
+  }
+  await p.waitFor(`document.querySelector('#incoming').open`);
+  await p.click('#in-reject'); await p.fill('#rj', 'Outside our delivery area'); await p.click('#rj-ok'); await new Promise((r) => setTimeout(r, 250));
+  await p.waitFor(`document.querySelector('#incoming').open`);
+  await p.click('#in-later'); await new Promise((r) => setTimeout(r, 400));
   await p.eval(`(()=>{const c=document.querySelector('#col-confirmed ~ .ord [data-act=preparing]');c&&c.click();return true})()`);
   await new Promise((r) => setTimeout(r, 300)); await p.shot(out + '04-staff-incoming-orders.png');
+  await p.click('[data-view="archive"]'); await new Promise((r) => setTimeout(r, 200)); await p.eval(`document.querySelector('.arch summary')?.click();true`);
+  await new Promise((r) => setTimeout(r, 200)); await p.shot(out + '04b-admin-archive.png');
+
+  p = await fresh({ width: 390, height: 844, mobile: true, scale: 2 });
+  await p.goto(U('/en/admin/')); await dismiss(p);
+  await p.fill('#a-user', 'owner'); await p.fill('#a-pass', 'owner-demo'); await p.click('#login button[type=submit]');
+  await p.waitFor('document.querySelector("#sim")'); await p.click('#sim'); await p.click('#sim');
+  await p.waitFor(`document.querySelector('#incoming').open`); await new Promise((r) => setTimeout(r, 400));
+  await p.shot(out + '04c-mobile-admin-incoming-popup.png');
+  console.log('overflow', await p.eval('document.documentElement.scrollWidth>innerWidth'));
 
   p = await fresh({ width: 1440, height: 900 });
   await p.goto(U('/events/')); await dismiss(p); await p.shot(out + '05-events.png', { full: true });

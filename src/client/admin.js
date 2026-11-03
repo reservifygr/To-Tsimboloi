@@ -1,9 +1,9 @@
 // Staff admin (DEMO). The login below is a PUBLIC FIXTURE with no security value: it only demonstrates role gating.
 // Production needs real authentication (e.g. Supabase Auth) and server-side RLS/policy enforcement.
-import { lang, T, $, $$, esc, adapter, storage, toast, fmtDateTime, uuid, base } from './core.js';
+import { lang, T, $, $$, esc, adapter, storage, toast, fmtDateTime, fmtTime, uuid, base } from './core.js';
 import { eur, toCents } from './shared/money.js';
 import { L } from './shared/strings.js';
-import { TRANSITIONS, ROLE_TRANSITIONS, can, OrderError } from './shared/orders.js';
+import { TRANSITIONS, ROLE_TRANSITIONS, ACTIVE_STATUSES, can, canTransition, OrderError } from './shared/orders.js';
 import { emptyCart, addLine } from './shared/cart.js';
 import { LATEST_POSTS, PAST_POSTS, EVENTS } from './shared/social-data.js';
 import { VENUE } from './shared/content-data.js';
@@ -16,14 +16,20 @@ let session = null;
 try { session = JSON.parse(sessionStorage.getItem(SESSION) || 'null'); } catch { session = null; }
 let tab = 'orders';
 let filter = 'all';
+let view = 'active'; // 'active' | 'archive'
+let query = '';
 let seen = null;
 let audio = null;
 let soundOn = false;
+let alarm = null;
+let freshIds = [];
+const dismissed = new Set(); // pending orders the staff chose to look at later
 let sig = '';
 let qrState = { url: '', table: '' };
 
-const A = (p) => T('admin.' + p);
-const EDITING = ['menu', 'media', 'qr', 'settings'];
+const A = (p, v) => T('admin.' + p, v);
+const EDITING = ['menu', 'media', 'qr', 'settings', 'customers'];
+const pnorm = (p) => String(p ?? '').replace(/[^\d+]/g, '');
 
 function renderLogin(msg = '') {
   root.innerHTML = `<form class="login" id="login" novalidate><div class="fixture" role="note"><strong>${esc(A('demoBox'))}</strong>
@@ -39,40 +45,87 @@ function renderLogin(msg = '') {
       session = { user: u, role: u };
       try { sessionStorage.setItem(SESSION, JSON.stringify(session)); } catch { /* memory only */ }
       adapter.saveSettings({});
+      enableSound(); // this click is the gesture browsers require before any sound
       seen = null; render();
     } else renderLogin(A('badLogin'));
   });
 }
 
-function logout() { session = null; try { sessionStorage.removeItem(SESSION); } catch { /* ignore */ } renderLogin(); }
-
-function beep() {
-  if (!soundOn || !audio) return;
-  try {
-    const o = audio.createOscillator(); const g = audio.createGain();
-    o.type = 'sine'; o.frequency.value = 880; g.gain.value = 0.12;
-    o.connect(g); g.connect(audio.destination); o.start(); o.stop(audio.currentTime + 0.25);
-  } catch { /* sound is optional */ }
+function logout() {
+  stopAlarm();
+  document.getElementById('incoming')?.close();
+  document.getElementById('reason')?.close();
+  session = null;
+  try { sessionStorage.removeItem(SESSION); } catch { /* ignore */ }
+  renderLogin();
 }
 
-const tabsFor = (role) => ['orders', 'menu', 'media', 'qr', 'settings', ...(can(role, 'reports') ? ['reports'] : []), 'audit'];
+/* ---- Sound: a soft two-note chime, repeated every 10 s until every pending order is answered ---- */
+function enableSound() {
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    audio.resume?.();
+    soundOn = true;
+  } catch { soundOn = false; }
+}
+function tone(freq, at, len) {
+  const o = audio.createOscillator(); const g = audio.createGain();
+  const t0 = audio.currentTime + at;
+  o.type = 'sine'; o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(0.09, t0 + 0.05);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+  o.connect(g); g.connect(audio.destination); o.start(t0); o.stop(t0 + len + 0.05);
+}
+function chime() {
+  if (!soundOn || !audio) return;
+  try { audio.resume?.(); tone(659.25, 0, 0.55); tone(880, 0.24, 0.8); } catch { /* sound is optional */ }
+}
+function stopAlarm() { if (alarm) { clearInterval(alarm); alarm = null; } }
+const pendingFor = (role) => (canTransition(role, 'confirmed') ? adapter.listOrders().filter((o) => o.status === 'pending') : []);
+function syncAlarm(pending, fresh) {
+  if (!pending.length || !soundOn) { stopAlarm(); return; }
+  if (!alarm) {
+    chime();
+    alarm = setInterval(() => {
+      if (!session || !soundOn || !pendingFor(session.role).length) { stopAlarm(); return; }
+      chime();
+    }, 10000);
+  } else if (fresh.length) chime();
+}
+
+const tabsFor = (role) => ['orders', 'customers', 'menu', 'media', 'qr', 'settings', ...(can(role, 'reports') ? ['reports'] : []), 'audit'];
+
+/** Looks at orders: detects new ones, drives the alarm and the incoming popup. Runs on every render and every poll tick. */
+function watch() {
+  if (!session) return [];
+  const orders = adapter.listOrders();
+  const ids = new Set(orders.map((o) => o.id));
+  const fresh = seen ? orders.filter((o) => !seen.has(o.id)).map((o) => o.id) : [];
+  seen = ids;
+  if (fresh.length) { freshIds = fresh; fresh.forEach((id) => dismissed.delete(id)); }
+  const pending = canTransition(session.role, 'confirmed') ? orders.filter((o) => o.status === 'pending') : [];
+  syncAlarm(pending, fresh);
+  syncIncoming(pending);
+  return pending;
+}
 
 function render() {
   if (!session) return renderLogin();
   const role = session.role;
+  const pending = watch();
   const orders = adapter.listOrders();
-  const ids = new Set(orders.map((o) => o.id));
-  const fresh = seen ? orders.filter((o) => !seen.has(o.id)).map((o) => o.id) : [];
-  if (fresh.length) beep();
-  seen = ids;
   if (!tabsFor(role).includes(tab)) tab = 'orders';
-  const views = { orders: ordersView, menu: menuView, media: mediaView, qr: qrView, settings: settingsView, reports: reportsView, audit: auditView };
+  const views = { orders: ordersView, customers: customersView, menu: menuView, media: mediaView, qr: qrView, settings: settingsView, reports: reportsView, audit: auditView };
+  const waiting = pending.length && !document.getElementById('incoming')?.open
+    ? `<div class="alert-bar" role="status"><span class="grow">${esc(A('waiting', { n: pending.length }))}</span><button class="btn btn-primary btn-sm" type="button" id="open-in">${esc(A('openIt'))}</button></div>` : '';
   root.innerHTML = `<div class="admin-bar"><span class="grow"><strong>${esc(A('roles.' + role))}</strong> (${esc(session.user)}) <span class="badge">${esc(T('common.demo'))}</span></span>
-    <button class="btn btn-ghost btn-sm" type="button" id="snd" aria-pressed="${soundOn}">${esc(soundOn ? A('soundOn') : A('soundOff'))}</button>
+    <button class="btn btn-sm ${soundOn ? 'btn-ghost' : 'snd-off'}" type="button" id="snd" aria-pressed="${soundOn}">${esc(soundOn ? A('soundOn') : A('soundOff'))}</button>
     <button class="btn btn-ghost btn-sm" type="button" id="out">${esc(A('logout'))}</button></div>
   <div class="tabs" role="tablist" aria-label="${esc(A('h1'))}">${tabsFor(role).map((k) => `<button role="tab" id="tab-${k}" aria-selected="${k === tab}" aria-controls="panel" data-tab="${k}">${esc(A('tabs.' + k))}</button>`).join('')}</div>
-  <div id="panel" role="tabpanel" aria-labelledby="tab-${tab}">${views[tab](orders, role, fresh)}</div>`;
-  sig = JSON.stringify([orders, adapter.getSettings(), tab, soundOn, filter]);
+  ${waiting}
+  <div id="panel" role="tabpanel" aria-labelledby="tab-${tab}">${views[tab](orders, role, freshIds)}</div>`;
+  sig = JSON.stringify([orders, adapter.getSettings(), adapter.listCustomers(), tab, soundOn, filter, view]);
   bind(role);
   if (tab === 'qr') drawQr();
 }
@@ -81,21 +134,34 @@ function lineText(l) { return `${l.qty}× ${L(l.name, lang)}${l.note ? ` ("${l.n
 function pickupText(o) { return o.pickup.mode === 'slot' ? fmtDateTime(o.pickup.requestedAt) : o.pickup.mode === 'manual' ? `"${o.pickup.manualText}"` : 'ASAP'; }
 const ftype = (o) => o.fulfilment?.type ?? 'takeaway';
 
+const addrText = (a) => (a ? `${a.street} ${a.number}, ${a.area} ${a.postcode}${a.floor ? `, ${A('floor')} ${a.floor}` : ''}${a.bell ? `, ${A('bell')} ${a.bell}` : ''}${a.notes ? ` (${a.notes})` : ''}` : '');
+const etaText = (o) => (o.etaMinutes ? A('eta', { n: o.etaMinutes, t: fmtTime(o.etaAt) }) : '');
+const isRegular = (o) => adapter.listCustomers().some((c) => c.phone === pnorm(o.customer.phone));
+
+function typeBadges(o) {
+  return `<div class="badges"><span class="badge type-${ftype(o)}">${esc(A(ftype(o)))}</span><span class="badge">${esc(A(o.payment ?? 'cash'))}</span>${o.paid ? '' : `<span class="badge warn">${esc(A('unpaid'))}</span>`}${isRegular(o) ? `<span class="badge reg">${esc(A('regular'))}</span>` : ''}${o.simulated ? '<span class="badge sim">SIM</span>' : ''}</div>`;
+}
+
+function secondaryActs(o) {
+  return `<div class="acts sec"><button class="btn btn-ghost btn-sm" type="button" data-rc="print">${esc(A('rcPrint'))}</button><button class="btn btn-ghost btn-sm" type="button" data-rc="email">${esc(A('rcEmail'))}</button><button class="btn btn-ghost btn-sm" type="button" data-rc="copy">${esc(A('rcCopy'))}</button>${isRegular(o) ? '' : `<button class="btn btn-ghost btn-sm" type="button" data-savecust>${esc(A('saveCustomer'))}</button>`}</div>`;
+}
+
 function orderCard(o, role, fresh) {
-  const acts = TRANSITIONS[o.status].filter((to) => ROLE_TRANSITIONS[role].includes(to));
+  const decides = o.status === 'pending' && canTransition(role, 'confirmed');
+  const acts = TRANSITIONS[o.status].filter((to) => ROLE_TRANSITIONS[role].includes(to) && !(o.status === 'pending' && (to === 'confirmed' || to === 'rejected' || to === 'cancelled')));
   const del = ftype(o) === 'delivery';
-  const a = o.fulfilment?.address;
-  const addr = del && a ? `<div class="addr"><strong>${esc(A('address'))}:</strong> ${esc(`${a.street} ${a.number}, ${a.area} ${a.postcode}`)}${a.floor ? `, ${esc(A('floor'))} ${esc(a.floor)}` : ''}${a.bell ? `, ${esc(A('bell'))} ${esc(a.bell)}` : ''}${a.notes ? ` (${esc(a.notes)})` : ''}</div>` : '';
+  const addr = del && o.fulfilment?.address ? `<div class="addr"><strong>${esc(A('address'))}:</strong> ${esc(addrText(o.fulfilment.address))}</div>` : '';
   return `<article class="ord ${fresh.includes(o.id) ? 'is-new' : ''}" data-id="${esc(o.id)}" data-version="${o.version}" data-type="${ftype(o)}" aria-label="${esc(o.id)}">
   <header><span>${esc(o.id)}</span><span>${esc(eur(o.subtotal, lang))}</span></header>
-  <div class="badges"><span class="badge type-${ftype(o)}">${esc(A(ftype(o)))}</span><span class="badge">${esc(A(o.payment ?? 'cash'))}</span>${o.paid ? '' : `<span class="badge warn">${esc(A('unpaid'))}</span>`}${o.simulated ? '<span class="badge sim">SIM</span>' : ''}</div>
+  ${typeBadges(o)}
   <div>${esc(o.customer.name)} · <a href="tel:${esc(o.customer.phone.replace(/\s/g, ''))}">${esc(o.customer.phone)}</a></div>
   ${addr}
   <div>${esc(A('pickup'))}: ${esc(pickupText(o))}</div>
+  ${o.etaMinutes ? `<div class="eta">${esc(etaText(o))}</div>` : ''}
   <ul>${o.lines.map((l) => `<li>${esc(lineText(l))}</li>`).join('')}</ul>
-  <div class="small muted">${esc(A('version'))}${o.version} · ${esc(fmtDateTime(o.createdAt))}</div>
-  <div class="acts rc-acts"><button class="btn btn-ghost btn-sm" type="button" data-rc="print">${esc(A('rcPrint'))}</button><button class="btn btn-ghost btn-sm" type="button" data-rc="email">${esc(A('rcEmail'))}</button><button class="btn btn-ghost btn-sm" type="button" data-rc="copy">${esc(A('rcCopy'))}</button></div>
-  <div class="acts">${acts.map((to) => `<button class="btn ${to === 'rejected' || to === 'cancelled' ? 'btn-ghost' : 'btn-primary'} btn-sm" type="button" data-act="${to}">${esc(A('act.' + to))}</button>`).join('')}</div></article>`;
+  <div class="small muted">${esc(fmtDateTime(o.createdAt))}</div>
+  <div class="acts">${decides ? `<button class="btn btn-primary btn-sm" type="button" data-review>${esc(A('accept'))} / ${esc(A('reject'))}</button>` : ''}${acts.map((to) => `<button class="btn ${to === 'cancelled' ? 'btn-ghost' : 'btn-primary'} btn-sm" type="button" data-act="${to}">${esc(A('act.' + to))}</button>`).join('')}</div>
+  ${secondaryActs(o)}</article>`;
 }
 
 const money = (c) => eur(c, lang);
@@ -110,9 +176,10 @@ function receiptText(o) {
     `${o.id}  ${fmtDateTime(o.createdAt)}`,
     `${A(ftype(o)).toUpperCase()} / ${A(o.payment ?? 'cash')}`,
     `${A('pickup')}: ${pickupText(o)}`,
+    ...(o.etaMinutes ? [etaText(o)] : []),
     `${A('rcCustomer')}: ${o.customer.name}, ${o.customer.phone}`,
   ];
-  if (del && a) rows.push(`${A('address')}: ${a.street} ${a.number}, ${a.area} ${a.postcode}${a.floor ? `, ${A('floor')} ${a.floor}` : ''}${a.bell ? `, ${A('bell')} ${a.bell}` : ''}${a.notes ? ` (${a.notes})` : ''}`);
+  if (del && a) rows.push(`${A('address')}: ${addrText(a)}`);
   rows.push('------------------------------');
   o.lines.forEach((l) => rows.push(`${l.qty}x ${L(l.name, lang)}${l.note ? ` ("${l.note}")` : ''}  ${money(l.total)}`));
   rows.push('------------------------------', `${A('rcTotal')}: ${money(o.subtotal)}`);
@@ -140,19 +207,171 @@ function emailReceipt(o) {
 }
 
 function ordersView(all, role, fresh) {
-  const orders = filter === 'all' ? all : all.filter((o) => ftype(o) === filter);
+  const isActive = (o) => ACTIVE_STATUSES.includes(o.status);
+  const pool = all.filter((o) => (view === 'active' ? isActive(o) : !isActive(o)));
+  const orders = filter === 'all' ? pool : pool.filter((o) => ftype(o) === filter);
+  const cnt = (f) => (f === 'all' ? pool.length : pool.filter((o) => ftype(o) === f).length);
+  const nActive = all.filter(isActive).length;
+  const nArch = all.length - nActive;
+  const views = `<div class="seg" role="group" aria-label="${esc(A('tabs.orders'))}"><button type="button" data-view="active" aria-pressed="${view === 'active'}">${esc(A('viewActive'))}<span class="n">${nActive}</span></button><button type="button" data-view="archive" aria-pressed="${view === 'archive'}">${esc(A('viewArchive'))}<span class="n">${nArch}</span></button></div>`;
+  const seg = `<div class="seg" role="group" aria-label="${esc(A('filter'))}">${['all', 'takeaway', 'delivery'].map((f) => `<button type="button" data-filter="${f}" aria-pressed="${filter === f}">${esc(A(f))}<span class="n">${cnt(f)}</span></button>`).join('')}</div>`;
+  const sim = can(role, 'simulate') ? `<button class="btn btn-ghost btn-sm" type="button" id="sim">${esc(A('simulate'))}</button>` : '';
+  const tools = `<span class="grow"></span>${sim}<button class="btn btn-ghost btn-sm" type="button" id="reset">${esc(A('reset'))}</button>`;
+  const head = `<div class="toolbar">${views}${seg}${tools}</div>`;
+  if (view === 'archive') {
+    return `${head}<p class="small muted">${esc(A('archiveHint'))}</p>
+    <div class="field"><label class="sr-only" for="arch-q">${esc(A('archiveSearch'))}</label><input id="arch-q" type="search" placeholder="${esc(A('archiveSearch'))}" value="${esc(query)}" autocomplete="off"></div>
+    <div id="arch-list">${archiveList(orders)}</div>`;
+  }
   const cols = ['pending', 'confirmed', 'preparing', 'ready'];
-  const done = orders.filter((o) => !cols.includes(o.status));
-  const sim = can(role, 'simulate') ? `<button class="btn btn-primary btn-sm" type="button" id="sim">${esc(A('simulate'))}</button>` : '';
-  const board = cols.map((s) => {
-    const list = orders.filter((o) => o.status === s);
-    return `<section class="col" aria-labelledby="col-${s}"><h3 id="col-${s}">${esc(A('cols.' + s))} <span class="badge">${list.length}</span></h3>${list.map((o) => orderCard(o, role, fresh)).join('') || `<p class="small muted">${esc(A('noOrders'))}</p>`}</section>`;
+  const board = cols.map((st) => {
+    const list = orders.filter((o) => o.status === st);
+    return `<section class="col" aria-labelledby="col-${st}"><h3 id="col-${st}">${esc(A('cols.' + st))} <span class="badge">${list.length}</span></h3>${list.map((o) => orderCard(o, role, fresh)).join('') || `<p class="small muted">${esc(A('noOrders'))}</p>`}</section>`;
   }).join('');
-  const seg = ['all', 'takeaway', 'delivery'].map((f) => `<button type="button" data-filter="${f}" aria-pressed="${filter === f}">${esc(A(f))}</button>`).join('');
-  return `<div class="admin-bar">${sim}<button class="btn btn-ghost btn-sm" type="button" id="reset">${esc(A('reset'))}</button><span class="grow"></span><span class="small muted">${esc(A('filter'))}</span><div class="seg" role="group" aria-label="${esc(A('filter'))}">${seg}</div></div>
-  <div class="board">${board}</div>
-  <h3 style="margin-top:2rem">${esc(A('history'))}</h3>
-  ${done.length ? `<table class="table"><tbody>${done.map((o) => `<tr><td>${esc(o.id)}</td><td>${esc(A(ftype(o)))}</td><td>${esc(o.customer.name)}</td><td>${esc(A('status.' + o.status))}${o.audit.at(-1).reason ? ` (${esc(o.audit.at(-1).reason)})` : ''}</td><td>${esc(eur(o.subtotal, lang))}</td></tr>`).join('')}</tbody></table>` : `<p class="muted">${esc(A('noOrders'))}</p>`}`;
+  return `${head}<div class="board">${board}</div>`;
+}
+
+function archiveList(orders) {
+  const q = query.trim().toLowerCase();
+  const rows = orders
+    .filter((o) => !q || `${o.id} ${o.customer.name} ${o.customer.phone}`.toLowerCase().includes(q))
+    .slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 100);
+  if (!rows.length) return `<p class="muted">${esc(A('archiveEmpty'))}</p>`;
+  return rows.map((o) => {
+    const last = o.audit.at(-1);
+    return `<details class="arch" data-id="${esc(o.id)}"><summary><span><strong>${esc(o.id)}</strong></span><span>${esc(fmtDateTime(o.createdAt))}</span><span class="badge type-${ftype(o)}">${esc(A(ftype(o)))}</span><span>${esc(o.customer.name)}</span><span class="st">${esc(A('status.' + o.status))}</span><span>${esc(eur(o.subtotal, lang))}</span></summary>
+    <div class="arch-body">${typeBadges(o)}<div>${esc(o.customer.name)} · <a href="tel:${esc(o.customer.phone.replace(/\s/g, ''))}">${esc(o.customer.phone)}</a></div>
+    ${ftype(o) === 'delivery' && o.fulfilment?.address ? `<div><strong>${esc(A('address'))}:</strong> ${esc(addrText(o.fulfilment.address))}</div>` : ''}
+    ${o.etaMinutes ? `<div>${esc(etaText(o))}</div>` : ''}${last?.reason ? `<div><strong>${esc(last.reason)}</strong></div>` : ''}
+    <ul>${o.lines.map((l) => `<li>${esc(lineText(l))}</li>`).join('')}</ul>${secondaryActs(o)}</div></details>`;
+  }).join('');
+}
+
+function customersView(orders) {
+  const list = adapter.listCustomers();
+  const n = (phone) => orders.filter((o) => pnorm(o.customer.phone) === phone).length;
+  return `<p class="notice">${esc(A('custLead'))}</p>
+  ${list.length ? list.map((c) => `<article class="cust" data-phone="${esc(c.phone)}"><header><span><strong>${esc(c.name)}</strong> <span class="badge reg">${esc(A('regular'))}</span></span><span><a href="tel:${esc(c.phone)}">${esc(c.phone)}</a> · <span class="small muted">${n(c.phone)} ${esc(A('custOrders'))}</span></span></header>
+    <div>${c.address ? `<strong>${esc(A('address'))}:</strong> ${esc(addrText(c.address))}` : `<span class="muted">${esc(A('custNoAddr'))}</span>`}</div>
+    <div class="field"><label for="cn-${esc(c.phone)}">${esc(A('custNotes'))}</label><textarea id="cn-${esc(c.phone)}" data-cnotes maxlength="200">${esc(c.notes)}</textarea></div>
+    <div class="acts"><button class="btn btn-primary btn-sm" type="button" data-csave>${esc(A('custSave'))}</button><button class="btn btn-ghost btn-sm" type="button" data-cdel>${esc(A('custDelete'))}</button></div></article>`).join('') : `<p class="muted">${esc(A('custEmpty'))}</p>`}`;
+}
+
+/* ---- Popups: incoming order (accept with a time / reject with a reason) and cancel-with-reason ---- */
+function dlgEl(id) {
+  let d = document.getElementById(id);
+  if (!d) {
+    d = document.createElement('dialog');
+    d.id = id; d.className = 'dialog incoming';
+    d.setAttribute('aria-labelledby', `${id}-h`);
+    document.body.append(d);
+  }
+  return d;
+}
+
+function summaryHtml(o) {
+  const a = o.fulfilment?.address;
+  return `<div class="sum">${typeBadges(o)}<div><strong>${esc(o.customer.name)}</strong> · ${esc(o.customer.phone)}</div>
+  ${ftype(o) === 'delivery' && a ? `<div><strong>${esc(A('address'))}:</strong> ${esc(addrText(a))}</div>` : ''}
+  <div>${esc(A('pickup'))}: ${esc(pickupText(o))}</div>
+  <ul>${o.lines.map((l) => `<li>${esc(lineText(l))}</li>`).join('')}</ul>
+  <div class="tot"><span>${esc(A('rcTotal'))}</span><span>${esc(eur(o.subtotal, lang))}</span></div></div>`;
+}
+
+/** `seenVersion` is the version the staff member was looking at: a change from another device makes this fail instead of overwriting. */
+function apply(id, to, seenVersion, extra = {}) {
+  try {
+    adapter.changeStatus(id, to, { actor: session.user, role: session.role, expectedVersion: seenVersion, ...extra });
+  } catch (err) {
+    toast(err instanceof OrderError && err.code === 'STALE_VERSION' ? A('stale') : err.code === 'FORBIDDEN' ? A('forbidden') : err.message);
+  }
+  render();
+}
+
+function reasonStep(o, { title, confirmLabel, to, back }) {
+  const reasons = [0, 1, 2, 3].map((i) => A(`reasons.r${i}`));
+  return `<h3 class="h-small">${esc(title)}</h3>
+  <div class="chips" role="group" aria-label="${esc(title)}">${reasons.map((r) => `<button type="button" data-reason="${esc(r)}" aria-pressed="false">${esc(r)}</button>`).join('')}</div>
+  <div class="field"><label for="rj">${esc(A('reasonLabel'))}</label><input id="rj" type="text" maxlength="120" autocomplete="off"></div>
+  <div class="error" id="rj-err" role="alert"></div>
+  <div class="dialog-actions"><button class="btn btn-primary" type="button" id="rj-ok">${esc(confirmLabel)}</button><button class="btn btn-ghost" type="button" id="rj-back">${esc(back)}</button></div>`;
+}
+
+function wireReason(host, o, to, onBack, onDone) {
+  $$('[data-reason]', host).forEach((b) => b.addEventListener('click', () => {
+    $('#rj', host).value = b.dataset.reason;
+    $$('[data-reason]', host).forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  }));
+  $('#rj-back', host).addEventListener('click', onBack);
+  $('#rj-ok', host).addEventListener('click', () => {
+    const reason = $('#rj', host).value.trim();
+    if (!reason) { $('#rj-err', host).textContent = A('reasonNeeded'); $('#rj', host).focus(); return; }
+    apply(o.id, to, o.version, { reason });
+    onDone?.();
+  });
+}
+
+function showIncoming(o, total) {
+  const dlg = dlgEl('incoming');
+  if (!dlg.dataset.wired) {
+    dlg.dataset.wired = '1';
+    // Closing without answering (Esc, "Later") keeps the order waiting; the alarm goes on and a bar offers to reopen it.
+    dlg.addEventListener('close', () => {
+      if (dlg.open) return; // already reopened for a newer order: leave it alone
+      const id = dlg.dataset.id;
+      if (id && adapter.getOrder(id)?.status === 'pending') pendingFor(session?.role ?? 'kitchen').forEach((x) => dismissed.add(x.id));
+      dlg.dataset.id = '';
+      if (session) render();
+    });
+  }
+  const s = adapter.getSettings();
+  const del = ftype(o) === 'delivery';
+  const def = Math.min(240, (s.prepMinutes || 25) + (del ? 15 : 0));
+  dlg.dataset.id = o.id;
+  const accept = () => {
+    $('#in-step').innerHTML = `<fieldset class="field"><legend class="h-small">${esc(del ? A('etaDelivery') : A('etaTakeaway'))}</legend>
+      <div class="chips" role="group">${[...new Set([10, 15, 20, 30, 45, 60, 90, def])].sort((x, y) => x - y).map((m) => `<button type="button" data-eta="${m}" aria-pressed="${m === def}">${m}</button>`).join('')}</div>
+      <div class="eta-row"><div class="field"><label for="eta">${esc(A('etaCustom'))}</label><input id="eta" type="number" min="1" max="240" inputmode="numeric" value="${def}"></div><span class="muted">${esc(A('minutes'))}</span></div></fieldset>
+      <div class="error" id="in-err" role="alert"></div>
+      <div class="dialog-actions"><button class="btn btn-primary" type="button" id="in-accept">${esc(A('accept'))}</button><button class="btn btn-ghost" type="button" id="in-reject">${esc(A('reject'))}</button><button class="btn btn-ghost" type="button" id="in-later">${esc(A('later'))}</button></div>`;
+    const input = $('#eta');
+    const mark = () => $$('[data-eta]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.eta === String(Number(input.value)))));
+    $$('[data-eta]').forEach((b) => b.addEventListener('click', () => { input.value = b.dataset.eta; mark(); }));
+    input.addEventListener('input', mark);
+    $('#in-accept').addEventListener('click', () => {
+      const eta = Number(input.value);
+      if (!Number.isInteger(eta) || eta < 1 || eta > 240) { $('#in-err').textContent = A('etaBad'); input.focus(); return; }
+      apply(o.id, 'confirmed', o.version, { etaMinutes: eta });
+    });
+    $('#in-reject').addEventListener('click', () => {
+      $('#in-step').innerHTML = reasonStep(o, { title: A('rejectTitle'), confirmLabel: A('rejectConfirm'), to: 'rejected', back: A('back') });
+      wireReason($('#in-step'), o, 'rejected', accept);
+      $('#rj').focus();
+    });
+    $('#in-later').addEventListener('click', () => dlg.close());
+  };
+  dlg.innerHTML = `<h2 id="incoming-h">${esc(A('inTitle'))} · ${esc(o.id)}</h2><p class="cnt" id="in-count">${esc(A('inCount', { i: 1, n: total }))}</p>${summaryHtml(o)}<div id="in-step"></div>`;
+  accept();
+  if (!dlg.open) dlg.showModal();
+  $('#in-accept')?.focus({ preventScroll: true });
+}
+
+function syncIncoming(pending) {
+  const dlg = dlgEl('incoming');
+  const visible = pending.filter((o) => !dismissed.has(o.id));
+  if (!visible.length) { if (dlg.open) dlg.close(); return; }
+  if (dlg.open && visible.some((o) => o.id === dlg.dataset.id)) {
+    const c = $('#in-count'); if (c) c.textContent = A('inCount', { i: 1, n: pending.length });
+    return;
+  }
+  showIncoming(visible[0], pending.length);
+}
+
+function askCancel(o) {
+  const dlg = dlgEl('reason');
+  dlg.innerHTML = `<h2 id="reason-h">${esc(A('cancelTitle'))} · ${esc(o.id)}</h2>${reasonStep(o, { title: A('reasonLabel'), confirmLabel: A('cancelConfirm'), to: 'cancelled', back: A('back') })}`;
+  wireReason(dlg, o, 'cancelled', () => dlg.close(), () => dlg.close());
+  dlg.showModal();
 }
 
 function statusOf(i) { return i.hidden ? 'hidden' : i.available ? 'available' : 'soldout'; }
@@ -297,12 +516,40 @@ async function onUpload(input) {
   render();
 }
 
+/** Receipt / courier-email / copy / save-customer buttons, in the board cards and in the archive. */
+function bindOrderButtons(scope) {
+  $$('[data-rc]', scope).forEach((b) => b.addEventListener('click', async () => {
+    const o = adapter.getOrder(b.closest('[data-id]').dataset.id);
+    if (!o) return;
+    if (b.dataset.rc === 'print') printReceipt(o);
+    else if (b.dataset.rc === 'email') emailReceipt(o);
+    else { try { await navigator.clipboard.writeText(receiptText(o)); toast(A('rcCopied')); } catch { toast(receiptText(o), 8000); } }
+  }));
+  $$('[data-savecust]', scope).forEach((b) => b.addEventListener('click', () => {
+    const o = adapter.getOrder(b.closest('[data-id]').dataset.id);
+    if (!o) return;
+    try {
+      const old = adapter.listCustomers().find((x) => x.phone === pnorm(o.customer.phone));
+      adapter.saveCustomer({ name: o.customer.name, phone: o.customer.phone, address: o.fulfilment?.address ?? old?.address ?? null, notes: old?.notes ?? '' });
+      toast(A('customerSaved'));
+      if (scope === root) render(); else b.hidden = true;
+    } catch (err) { toast(err.message); }
+  }));
+}
+
 function bind(role) {
   $('#out').addEventListener('click', logout);
   $('#snd').addEventListener('click', () => {
-    soundOn = !soundOn;
-    if (soundOn) { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume?.(); beep(); }
+    if (soundOn) { soundOn = false; stopAlarm(); } else { enableSound(); chime(); }
     render();
+  });
+  $('#open-in')?.addEventListener('click', () => { dismissed.clear(); render(); });
+  $$('[data-view]').forEach((b) => b.addEventListener('click', () => { view = b.dataset.view; render(); }));
+  $('#arch-q')?.addEventListener('input', (e) => {
+    query = e.target.value;
+    const all = adapter.listOrders().filter((o) => !ACTIVE_STATUSES.includes(o.status));
+    $('#arch-list').innerHTML = archiveList(filter === 'all' ? all : all.filter((o) => ftype(o) === filter));
+    bindOrderButtons($('#arch-list'));
   });
   $$('[data-tab]').forEach((b) => b.addEventListener('click', () => { tab = b.dataset.tab; render(); $(`#tab-${tab}`).focus(); }));
   $$('[data-tab]').forEach((b) => b.addEventListener('keydown', (e) => {
@@ -312,24 +559,25 @@ function bind(role) {
   $('#sim')?.addEventListener('click', () => { simulate(); render(); });
   $('#reset')?.addEventListener('click', () => { adapter.resetDemo(); seen = null; render(); });
   $$('[data-filter]').forEach((b) => b.addEventListener('click', () => { filter = b.dataset.filter; render(); }));
+  $$('.ord [data-review]').forEach((b) => b.addEventListener('click', () => {
+    const o = adapter.getOrder(b.closest('.ord').dataset.id);
+    if (!o || o.status !== 'pending') return;
+    dismissed.delete(o.id);
+    showIncoming(o, adapter.listOrders().filter((x) => x.status === 'pending').length);
+  }));
   $$('.ord [data-act]').forEach((b) => b.addEventListener('click', () => {
-    const card = b.closest('.ord'); const to = b.dataset.act;
-    let reason;
-    if (to === 'rejected' || to === 'cancelled') { reason = window.prompt(A('reasonPrompt')); if (!reason) return; }
-    try {
-      adapter.changeStatus(card.dataset.id, to, { actor: session.user, role, expectedVersion: Number(card.dataset.version), reason });
-    } catch (err) {
-      toast(err instanceof OrderError && err.code === 'STALE_VERSION' ? A('stale') : err.code === 'FORBIDDEN' ? A('forbidden') : err.message);
-    }
-    render();
-  }));
-  $$('.ord [data-rc]').forEach((b) => b.addEventListener('click', async () => {
-    const o = adapter.listOrders().find((x) => x.id === b.closest('.ord').dataset.id);
+    const o = adapter.getOrder(b.closest('.ord').dataset.id);
     if (!o) return;
-    if (b.dataset.rc === 'print') printReceipt(o);
-    else if (b.dataset.rc === 'email') emailReceipt(o);
-    else { try { await navigator.clipboard.writeText(receiptText(o)); toast(A('rcCopied')); } catch { toast(receiptText(o), 8000); } }
+    if (b.dataset.act === 'cancelled') askCancel(o);
+    else apply(o.id, b.dataset.act, Number(b.closest('.ord').dataset.version));
   }));
+  bindOrderButtons(root);
+  $$('[data-csave]').forEach((b) => b.addEventListener('click', () => {
+    const card = b.closest('.cust');
+    const c = adapter.listCustomers().find((x) => x.phone === card.dataset.phone);
+    if (c) { adapter.saveCustomer({ ...c, notes: $('[data-cnotes]', card).value }); toast(A('custSavedNotes')); }
+  }));
+  $$('[data-cdel]').forEach((b) => b.addEventListener('click', () => { adapter.deleteCustomer(b.closest('.cust').dataset.phone); toast(A('custDeleted')); render(); }));
   $$('[data-status]').forEach((s) => s.addEventListener('change', () => {
     const v = s.value;
     adapter.setOverride(s.dataset.status, { available: v === 'available', hidden: v === 'hidden' });
@@ -361,11 +609,17 @@ function bind(role) {
 }
 
 // Live updates: poll storage so a second tab/device shows new orders and stale-version conflicts.
+// The alarm and popup are checked on every tick, even while someone is typing; the board only re-renders when idle.
 setInterval(() => {
-  if (!session || EDITING.includes(tab)) return;
-  if (document.activeElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
-  const next = JSON.stringify([adapter.listOrders(), adapter.getSettings(), tab, soundOn, filter]);
-  if (next !== sig) render();
+  if (!session) return;
+  const el = document.activeElement;
+  const busy = EDITING.includes(tab) || (el && ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName));
+  const next = JSON.stringify([adapter.listOrders(), adapter.getSettings(), adapter.listCustomers(), tab, soundOn, filter, view]);
+  if (!busy && next !== sig) render(); else watch();
 }, 1500);
 window.addEventListener('storage', () => { if (session && !EDITING.includes(tab) && !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) render(); });
+// After a page reload the browser forgets that sound was allowed: the first click anywhere on the page switches it back on.
+document.addEventListener('pointerdown', (e) => {
+  if (session && !audio && !e.target.closest?.('#snd, #login')) enableSound();
+});
 render();

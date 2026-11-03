@@ -253,8 +253,10 @@ fieldset{border:0;padding:0;margin:0}
 
 
 /* order v2 */
-.seg{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;background:var(--paper-2);padding:.35rem;border-radius:999px;max-width:420px;margin:1rem 0}
-.seg button{border:0;background:transparent;border-radius:999px;min-height:48px;font:600 1.02rem var(--sans);cursor:pointer;color:var(--ink);transition:background .2s,color .2s}
+.seg{display:inline-flex;flex-wrap:nowrap;gap:.25rem;background:var(--paper-2);padding:.3rem;border-radius:999px;max-width:100%;margin:1rem 0}
+.seg.wide{display:flex;max-width:420px}.seg.wide button{flex:1}
+.seg button{border:0;background:transparent;border-radius:999px;min-height:44px;padding:0 1.15rem;font:600 .98rem var(--sans);cursor:pointer;color:var(--ink);transition:background .2s,color .2s;white-space:nowrap}
+.seg button .n{opacity:.7;font-weight:500;margin-left:.3rem}
 .seg button[aria-pressed=true]{background:var(--night);color:#fff;box-shadow:0 4px 14px rgba(11,18,38,.3)}
 .mode-hint{color:var(--ink-2);margin-bottom:1.2rem}
 .radio-card{display:flex;gap:.7rem;align-items:flex-start;border:1.5px solid var(--line);border-radius:var(--r);padding:.8rem 1rem;margin-bottom:.6rem;cursor:pointer;background:#fff}
@@ -379,3 +381,38 @@ fieldset{border:0;padding:0;margin:0}
 .g-ext{position:relative}.g-ext img{width:100%;height:100%;object-fit:cover}
 .demo-tag{position:absolute;left:.5rem;bottom:.5rem;font:600 .68rem var(--sans);letter-spacing:.06em;text-transform:uppercase;background:rgba(11,18,38,.82);color:#f4ecdc;padding:.25rem .55rem;border-radius:999px}
 .o-item .gl{font-size:.82rem;color:var(--muted);line-height:1.35;margin:.15rem 0 .2rem;max-width:46ch}
+
+/* admin v3: toolbar, incoming popup, archive, customers, checkout dialog */
+.admin-bar .seg{margin:0}
+.toolbar{display:flex;flex-wrap:wrap;gap:.7rem 1rem;align-items:center;margin:0 0 1.1rem}.toolbar .grow{flex:1}
+.snd-off{background:#7a2418;color:#fff;border-color:#7a2418}
+.alert-bar{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;background:#fff3d6;border:1.5px solid #b9893a;color:#4a3410;border-radius:12px;padding:.7rem 1rem;margin-bottom:1rem;font-weight:600}.alert-bar .grow{flex:1}
+.ord .eta{font-weight:600;color:var(--copper)}.ord .acts.sec{margin-top:.4rem}.ord .acts.sec .btn{font-size:.82rem;min-height:36px;padding:.3rem .7rem}
+.badge.reg{background:var(--copper)}.badge.warn{background:#7a2418}
+.incoming{width:min(560px,calc(100vw - 24px));max-width:none;max-height:calc(100vh - 24px);overflow:auto}
+.incoming h2{margin:0 0 .2rem;font-size:1.5rem}.incoming .cnt{color:var(--muted);font-size:.9rem;margin:0 0 .6rem}
+.incoming .sum{background:var(--paper-2);border-radius:12px;padding:.8rem 1rem;margin:.6rem 0;font-size:.95rem}.incoming .sum ul{margin:.4rem 0 .2rem;padding-left:1.1rem}
+.incoming .sum .tot{font:700 1.2rem var(--serif);display:flex;justify-content:space-between;margin-top:.4rem}
+.chips{display:flex;flex-wrap:wrap;gap:.4rem;margin:.4rem 0}
+.chips button{border:1.5px solid var(--line);background:#fff;border-radius:999px;min-height:44px;min-width:56px;padding:0 .9rem;font:600 .95rem var(--sans);cursor:pointer;color:var(--ink)}
+.chips button[aria-pressed=true]{background:var(--night);border-color:var(--night);color:#fff}
+.incoming .eta-row{display:flex;gap:.6rem;align-items:end;flex-wrap:wrap}.incoming .eta-row .field{margin:0}.incoming .eta-row input{max-width:130px}
+.incoming .dialog-actions .btn{flex:1;min-width:140px}
+.arch{border:1px solid var(--line);border-radius:10px;background:var(--white);margin-bottom:.5rem}
+.arch summary{display:grid;grid-template-columns:9.5rem 8.5rem 6.5rem 1fr auto auto;gap:.2rem .8rem;align-items:center;padding:.7rem 1rem;cursor:pointer;font-size:.93rem}
+.arch summary .st{font-weight:600}.arch-body{padding:0 1rem 1rem;font-size:.92rem}.arch-body ul{margin:.3rem 0;padding-left:1.1rem}
+@media (max-width:720px){.arch summary{grid-template-columns:1fr auto}.arch summary span:nth-child(n+3){grid-column:auto}}
+.cust{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:1rem;margin-bottom:.7rem;display:grid;gap:.4rem}
+.cust header{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;justify-content:space-between}.cust textarea{min-height:60px}
+.checkout-dialog{width:min(640px,calc(100vw - 20px));max-width:none;max-height:calc(100vh - 20px);overflow:auto;padding:1.3rem}
+.checkout-dialog .co-head{display:flex;justify-content:space-between;align-items:center;gap:1rem}.checkout-dialog h2{margin:0;font-size:1.5rem}
+.cart .btn-primary.go{width:100%;margin-top:.8rem}
+.cart-fab{border:0;cursor:pointer;font:inherit;font-weight:700}
+.remember{display:flex;gap:.6rem;align-items:flex-start;margin:.6rem 0}.remember input{width:20px;height:20px;margin-top:.15rem;flex:none}
+.live-status{background:var(--paper-2);border-radius:12px;padding:.8rem 1rem;font-weight:600}
+
+.ord .acts.sec .btn{padding:.15rem .6rem;min-height:32px;font-size:.78rem}
+#arch-q{width:100%;min-height:48px;border:1.5px solid var(--ink);border-radius:10px;padding:.6rem .9rem;font:inherit;background:#fff;color:var(--ink)}
+.checkout-dialog .co-head{margin-bottom:.9rem}.checkout-dialog .live-status{margin-bottom:.9rem}.checkout-dialog h3{margin:.4rem 0 .6rem}
+.incoming .sum ul{padding-left:1.1rem}
+@media (max-width:480px){.incoming{padding:1.1rem}.incoming .chips button{min-width:52px}}
