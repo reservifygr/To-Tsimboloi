@@ -2,6 +2,7 @@
 // Mirrors what the production API must enforce server-side. DEMO: nothing here leaves the browser.
 import { totals } from './cart.js';
 
+/** @typedef {{street:string,number:string,area:string,postcode:string,floor?:string,bell?:string,notes?:string}} Address */
 /** @typedef {'pending'|'confirmed'|'preparing'|'ready'|'collected'|'rejected'|'cancelled'} OrderStatus */
 /** @typedef {'owner'|'staff'|'kitchen'} StaffRole */
 /**
@@ -9,9 +10,12 @@ import { totals } from './cart.js';
  * @typedef {{
  *   id:string, idempotencyKey:string, status:OrderStatus, version:number, demo:true, simulated:boolean,
  *   customer:{name:string,phone:string}, pickup:{mode:'asap'|'slot'|'manual',requestedAt?:string,manualText?:string},
- *   payment:'pay_at_pickup', lines:any[], subtotal:number, itemCount:number, createdAt:string, audit:AuditEntry[]
+ *   fulfilment:{type:'takeaway'|'delivery',address?:Address}, payment:'cash'|'card', paid:false, lines:any[], subtotal:number, itemCount:number, createdAt:string, audit:AuditEntry[]
  * }} Order
  */
+
+export const FULFILMENT_TYPES = ['takeaway', 'delivery'];
+export const PAYMENT_METHODS = ['cash', 'card']; // LABELS ONLY: no online payment exists; card = POS terminal at handover
 
 export const STATUSES = ['pending', 'confirmed', 'preparing', 'ready', 'collected', 'rejected', 'cancelled'];
 
@@ -64,6 +68,22 @@ export function validateCustomer({ name, phone }) {
   return { name: n, phone: p };
 }
 
+const clip = (v, n) => String(v ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
+
+/** Validate fulfilment. Delivery needs a complete address; takeaway carries none. */
+export function validateFulfilment(f = { type: 'takeaway' }) {
+  if (!FULFILMENT_TYPES.includes(f.type)) throw new OrderError('BAD_FULFILMENT', 'Choose takeaway or delivery');
+  if (f.type === 'takeaway') return { type: 'takeaway' };
+  const a = f.address ?? {};
+  const street = clip(a.street, 80), number = clip(a.number, 10), area = clip(a.area, 60);
+  const postcode = String(a.postcode ?? '').replace(/\s/g, '');
+  if (street.length < 3) throw new OrderError('BAD_ADDRESS_STREET', 'Enter the street');
+  if (!number) throw new OrderError('BAD_ADDRESS_NUMBER', 'Enter the street number');
+  if (area.length < 2) throw new OrderError('BAD_ADDRESS_AREA', 'Enter the area');
+  if (!/^\d{5}$/.test(postcode)) throw new OrderError('BAD_ADDRESS_POSTCODE', 'Postcode must be 5 digits');
+  return { type: 'delivery', address: { street, number, area, postcode, floor: clip(a.floor, 20), bell: clip(a.bell, 40), notes: clip(a.notes, 120) } };
+}
+
 function newId(now, seq) {
   const d = new Date(now);
   const pad = (x) => String(x).padStart(2, '0');
@@ -75,13 +95,15 @@ function newId(now, seq) {
  * @param {{menu:any,cart:any,customer:any,pickup:any,idempotencyKey:string,now:number|Date|string,seq:number,simulated?:boolean}} p
  * @returns {Order}
  */
-export function createOrder({ menu, cart, customer, pickup, idempotencyKey, now, seq, simulated = false }) {
+export function createOrder({ menu, cart, customer, pickup, idempotencyKey, now, seq, simulated = false, fulfilment = { type: 'takeaway' }, payment = 'cash' }) {
   if (!idempotencyKey || String(idempotencyKey).length < 8) throw new OrderError('NO_IDEMPOTENCY_KEY', 'Missing idempotency key');
   if (!cart.lines.length) throw new OrderError('EMPTY_CART', 'Cart is empty');
   const t = totals(menu, cart);
   if (t.problems.length) throw new OrderError('CART_PROBLEMS', `Cart has problems: ${t.problems.join(', ')}`);
   const c = validateCustomer(customer);
   const pk = normalisePickup(pickup);
+  const ful = validateFulfilment(fulfilment);
+  if (!PAYMENT_METHODS.includes(payment)) throw new OrderError('BAD_PAYMENT', 'Choose cash or card');
   const at = new Date(now).toISOString();
   return {
     id: newId(now, seq),
@@ -92,7 +114,9 @@ export function createOrder({ menu, cart, customer, pickup, idempotencyKey, now,
     simulated,
     customer: c,
     pickup: pk,
-    payment: 'pay_at_pickup', // label only: no card payment is supported
+    fulfilment: ful,
+    payment, // label only: 'card' means the card terminal at handover. No online payment exists.
+    paid: false,
     lines: t.lines.map(({ itemId, optionIds, qty, note, name, unit, total }) => ({ itemId, optionIds, qty, note, name, unit, total })),
     subtotal: t.subtotal,
     itemCount: t.itemCount,

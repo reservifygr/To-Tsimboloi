@@ -17,27 +17,6 @@ export const VENUE = {
   osmQuery: 'https://www.openstreetmap.org/search?query=' + encodeURIComponent('Αγίου Ιωάννου 71, Αγία Παρασκευή'),
 };
 
-/** @typedef {{id:string,kind:'live_music'|'themed_night'|'private'|'other',title:{el:string,en:string},blurb:{el:string,en:string},date:string|null,time:string|null,placeholder:true}} EventItem */
-/** @type {EventItem[]} */
-export const EVENTS = [
-  {
-    id: 'sample-live-weekend', kind: 'live_music', placeholder: true, date: null, time: null,
-    title: { el: 'Ζωντανή ελληνική μουσική', en: 'Live Greek music' },
-    blurb: {
-      el: 'Δείγμα κάρτας. Μια δημοσίευση του Ιουνίου 2026 αναφέρει ζωντανή μουσική σχεδόν κάθε Παρασκευοσαββατοκύριακο. Ημέρες, ώρες και μουσικοί θα οριστούν από το κατάστημα.',
-      en: 'Sample card. A June 2026 review mentions live music at most weekends. Days, times and musicians are to be set by the venue.',
-    },
-  },
-  {
-    id: 'sample-weekday-theme', kind: 'themed_night', placeholder: true, date: null, time: null,
-    title: { el: 'Θεματική βραδιά καθημερινής', en: 'Weekday themed night' },
-    blurb: {
-      el: 'Δείγμα κάρτας. Ιδέα για να προσθέσει το κατάστημα, π.χ. βραδιά με συγκεκριμένο μουσικό ρεπερτόριο. Δεν υπάρχει προγραμματισμένη εκδήλωση.',
-      en: 'Sample card. An idea for the venue to fill in, e.g. a night with a specific repertoire. No event is scheduled.',
-    },
-  },
-];
-
 /** @typedef {{id:string,title:{el:string,en:string},blurb:{el:string,en:string},status:'concept'|'existing_unconfirmed'}} Offer */
 /** @type {Offer[]} */
 export const OFFERS = [

@@ -53,3 +53,22 @@ test('QR: capacity, determinism, svg output, long input rejected', () => {
   assert.match(svg, /^<svg[^>]+aria-label="Menu QR"/);
   assert.throws(() => encodeQR('x'.repeat(400)), RangeError);
 });
+
+test('QR level H: format bits, capacity and logo plate', async () => {
+  const q = encodeQR('https://example.com/menu/', 'H');
+  const REF_H = ['001011010001001', '001001110111110', '001110011100111', '001100111010000', '000011101100010', '000001001010101', '000110100001100', '000100000111011'];
+  const m = q.modules;
+  const bits = [];
+  for (let i = 0; i <= 5; i++) bits[i] = m[i][8];
+  bits[6] = m[7][8]; bits[7] = m[8][8]; bits[8] = m[8][7];
+  for (let i = 9; i < 15; i++) bits[i] = m[8][14 - i];
+  const val = bits.reduce((acc, b, i) => acc | ((b ? 1 : 0) << i), 0);
+  assert.equal(val.toString(2).padStart(15, '0'), REF_H[q.mask]);
+  assert.ok(q.version >= encodeQR('https://example.com/menu/', 'M').version, 'H needs at least as many modules as M');
+  const svg = qrSvg('https://example.com/menu/?table=12', { logo: 'data:image/png;base64,AAAA', label: 'x' });
+  assert.match(svg, /<image href="data:image\/png;base64,AAAA"/);
+  const centre = encodeQR('https://example.com/menu/?table=12', 'H');
+  const plate = Math.round(centre.size * 0.24);
+  assert.ok((plate * plate) / (centre.size * centre.size) < 0.06, 'logo plate must stay under 6% of modules');
+  assert.throws(() => encodeQR('abc', 'Z'), RangeError);
+});

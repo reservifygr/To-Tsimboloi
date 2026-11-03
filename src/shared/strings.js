@@ -1,6 +1,8 @@
 // All UI copy, Greek first. Used at build time (static pages) and at runtime (order/admin/forms).
 // No emojis in the UI by design. Copy never claims things that are unverified.
 
+import { EXTRA, deepMerge } from './strings-extra.js';
+
 export const LANGS = ['el', 'en'];
 export const DEFAULT_LANG = 'el';
 
@@ -431,6 +433,9 @@ export const S = {
     common: { required: 'required', optional: 'optional', yes: 'Yes', no: 'No', demo: 'DEMO' },
   },
 };
+
+deepMerge(S.el, EXTRA.el);
+deepMerge(S.en, EXTRA.en);
 
 /** Safe nested lookup: t('el','order.errors.BAD_NAME'). Falls back to Greek, then to the key. */
 export function t(lang, path) {

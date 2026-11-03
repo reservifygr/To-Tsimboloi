@@ -40,3 +40,53 @@ function cookieNotice() {
 }
 cookieNotice();
 track('page_view');
+
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// Header shadow after scrolling
+const head = $('[data-header]');
+if (head) {
+  const on = () => head.classList.toggle('scrolled', scrollY > 10);
+  addEventListener('scroll', on, { passive: true });
+  on();
+}
+
+// Scroll reveal (content stays visible without JS and under reduced motion)
+const reveals = $$('.reveal');
+if (reduced || !('IntersectionObserver' in window)) reveals.forEach((e) => e.classList.add('in'));
+else {
+  const io = new IntersectionObserver((entries) => entries.forEach((en) => {
+    if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); }
+  }), { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+  reveals.forEach((e, i) => { e.style.transitionDelay = `${(i % 4) * 60}ms`; io.observe(e); });
+}
+
+// Gentle hero parallax
+const bg = $('[data-parallax]');
+if (bg && !reduced) {
+  let tick = false;
+  addEventListener('scroll', () => {
+    if (tick) return;
+    tick = true;
+    requestAnimationFrame(() => { if (scrollY < 900) bg.style.transform = `translateY(${scrollY * 0.12}px)`; tick = false; });
+  }, { passive: true });
+}
+
+// Event countdown; events whose date has passed are hidden (the daily rebuild moves them to "Past events")
+const athensToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Athens', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+$$('.js-upcoming').forEach((ev) => {
+  const date = ev.dataset.eventDate;
+  const today = athensToday();
+  if (date < today) {
+    ev.hidden = true;
+    const none = $('[data-no-upcoming]');
+    if (none) none.hidden = false;
+    ev.closest('.next-night')?.setAttribute('hidden', '');
+    return;
+  }
+  const cd = $('[data-countdown]', ev);
+  if (cd) {
+    const days = Math.round((Date.parse(date + 'T12:00:00Z') - Date.parse(today + 'T12:00:00Z')) / 86400000);
+    cd.textContent = days === 0 ? cd.dataset.today : days === 1 ? cd.dataset.tomorrow : cd.dataset.in.replace('{n}', String(days));
+  }
+});

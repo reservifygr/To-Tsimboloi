@@ -93,7 +93,7 @@ export function findItem(menu, id) {
 /**
  * Merge staff overrides (price / availability edited in /admin) onto the base menu.
  * @param {{categories:MenuCategory[],items:MenuItem[]}} menu
- * @param {Record<string,{price?:number,available?:boolean}>} overrides
+ * @param {Record<string,{price?:number,available?:boolean,hidden?:boolean}>} overrides
  */
 export function applyOverrides(menu, overrides = {}) {
   return {
@@ -105,6 +105,8 @@ export function applyOverrides(menu, overrides = {}) {
         ...it,
         price: Number.isInteger(o.price) && o.price >= 0 ? o.price : it.price,
         available: typeof o.available === 'boolean' ? o.available : it.available,
+        // hidden items vanish from the public menu and ordering; "sold out" items stay visible but cannot be ordered
+        hidden: typeof o.hidden === 'boolean' ? o.hidden : (it.hidden ?? false),
       };
     }),
   };

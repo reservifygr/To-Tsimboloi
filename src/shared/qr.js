@@ -5,6 +5,10 @@
 
 // Version table for level M (versions 1..10): [ecc codewords per block, number of blocks]
 const ECC_M = [null, [10, 1], [16, 1], [26, 1], [18, 2], [24, 2], [16, 4], [18, 4], [22, 4], [22, 5], [26, 5]];
+// Level H (~30% damage tolerated): needed when a logo covers the centre of the code.
+const ECC_H = [null, [17, 1], [28, 1], [22, 2], [16, 4], [22, 4], [28, 4], [26, 5], [26, 6], [24, 8], [28, 8]];
+const ECC = { M: ECC_M, H: ECC_H };
+const LEVEL_BITS = { M: 0b00, H: 0b10 };
 const TOTAL_CODEWORDS = [0, 26, 44, 70, 100, 134, 172, 196, 242, 292, 346];
 const ALIGN = [null, [], [6, 18], [6, 22], [6, 26], [6, 30], [6, 34], [6, 22, 38], [6, 24, 42], [6, 26, 46], [6, 28, 50]];
 
@@ -43,20 +47,20 @@ export function rsRemainder(data, degree) {
   return rem;
 }
 
-function dataCapacityBytes(version) {
-  const [eccPer, blocks] = ECC_M[version];
+function dataCapacityBytes(version, level = 'M') {
+  const [eccPer, blocks] = ECC[level][version];
   const dataCw = TOTAL_CODEWORDS[version] - eccPer * blocks;
   const lenBits = version < 10 ? 8 : 16;
   return Math.floor((dataCw * 8 - 4 - lenBits) / 8);
 }
 
-function pickVersion(len) {
-  for (let v = 1; v <= 10; v++) if (len <= dataCapacityBytes(v)) return v;
+function pickVersion(len, level = 'M') {
+  for (let v = 1; v <= 10; v++) if (len <= dataCapacityBytes(v, level)) return v;
   throw new RangeError('Text too long for this minimal QR encoder (max ~213 bytes)');
 }
 
-function buildCodewords(bytes, version) {
-  const [eccPer, blocks] = ECC_M[version];
+function buildCodewords(bytes, version, level = 'M') {
+  const [eccPer, blocks] = ECC[level][version];
   const dataCw = TOTAL_CODEWORDS[version] - eccPer * blocks;
   const bits = [];
   const put = (val, n) => { for (let i = n - 1; i >= 0; i--) bits.push((val >>> i) & 1); };
@@ -115,8 +119,8 @@ function bch(value, poly, bitsLen, msbShift) {
   return rem;
 }
 
-function formatBits(mask) {
-  const data = (0b00 << 3) | mask; // ECC level M = 00
+function formatBits(mask, level = 'M') {
+  const data = (LEVEL_BITS[level] << 3) | mask; // ECC indicator: M = 00, H = 10
   let rem = data;
   for (let i = 0; i < 10; i++) rem = (rem << 1) ^ ((rem >>> 9) * 0x537);
   return ((data << 10) | rem) ^ 0x5412;
@@ -128,9 +132,9 @@ function versionBits(version) {
   return (version << 12) | rem;
 }
 
-function drawFormat(g, mask) {
+function drawFormat(g, mask, level = 'M') {
   const n = g.m.length;
-  const bits = formatBits(mask);
+  const bits = formatBits(mask, level);
   const bit = (i) => ((bits >>> i) & 1) !== 0;
   for (let i = 0; i <= 5; i++) setFn(g, 8, i, bit(i));
   setFn(g, 8, 7, bit(6));
@@ -142,7 +146,7 @@ function drawFormat(g, mask) {
   setFn(g, 8, n - 8, true); // dark module
 }
 
-function drawFunctionPatterns(g, version) {
+function drawFunctionPatterns(g, version, level = 'M') {
   const n = g.m.length;
   for (let i = 0; i < n; i++) { setFn(g, 6, i, i % 2 === 0); setFn(g, i, 6, i % 2 === 0); }
   drawFinder(g, 3, 3); drawFinder(g, n - 4, 3); drawFinder(g, 3, n - 4);
@@ -151,7 +155,7 @@ function drawFunctionPatterns(g, version) {
     if ((i === 0 && j === 0) || (i === 0 && j === pos.length - 1) || (i === pos.length - 1 && j === 0)) continue;
     drawAlign(g, pos[i], pos[j]);
   }
-  drawFormat(g, 0);
+  drawFormat(g, 0, level);
   if (version >= 7) {
     const bits = versionBits(version);
     for (let i = 0; i < 18; i++) {
@@ -231,30 +235,45 @@ function penalty(m) {
 }
 
 /** @param {string} text @returns {{size:number,version:number,mask:number,modules:boolean[][]}} */
-export function encodeQR(text) {
+export function encodeQR(text, level = 'M') {
+  if (!ECC[level]) throw new RangeError('Unsupported error-correction level');
   const bytes = Array.from(new TextEncoder().encode(text));
-  const version = pickVersion(bytes.length);
-  const { codewords } = buildCodewords(bytes, version);
+  const version = pickVersion(bytes.length, level);
+  const { codewords } = buildCodewords(bytes, version, level);
   const size = version * 4 + 17;
   let best = null;
   for (let mask = 0; mask < 8; mask++) {
     const g = makeMatrix(size);
-    drawFunctionPatterns(g, version);
+    drawFunctionPatterns(g, version, level);
     placeData(g, codewords);
     applyMask(g, mask);
-    drawFormat(g, mask);
+    drawFormat(g, mask, level);
     const score = penalty(g.m);
     if (!best || score < best.score) best = { score, mask, m: g.m };
   }
-  return { size, version, mask: best.mask, modules: best.m };
+  return { size, version, mask: best.mask, level, modules: best.m };
 }
 
-/** Render as an SVG string (4-module quiet zone). */
-export function qrSvg(text, { dark = '#122040', light = '#ffffff', label = 'QR code' } = {}) {
-  const { size, modules } = encodeQR(text);
+/**
+ * Render as an SVG string (4-module quiet zone).
+ * With `logo` (an image URL / data URI) the code is built at error-correction level H and the logo sits in the centre
+ * on a light plate. The plate covers < 6% of the modules, well inside what level H can recover (~30%).
+ * Still: scan every printed code with a phone.
+ */
+export function qrSvg(text, { dark = '#122040', light = '#ffffff', label = 'QR code', logo = null, logoRatio = 0.24, logoAspect = 1 } = {}) {
+  const { size, modules } = encodeQR(text, logo ? 'H' : 'M');
   const q = 4;
   const total = size + q * 2;
+  // centre plate (in modules), forced odd/even so it stays centred on the grid
+  const plateW = Math.round(size * logoRatio * (logoAspect > 1 ? logoAspect : 1));
+  const plateH = Math.round(size * logoRatio * (logoAspect < 1 ? 1 / logoAspect : 1));
+  const x0 = Math.floor((size - plateW) / 2), y0 = Math.floor((size - plateH) / 2);
+  const inPlate = (x, y) => logo && x >= x0 && x < x0 + plateW && y >= y0 && y < y0 + plateH;
   let d = '';
-  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (modules[y][x]) d += `M${x + q},${y + q}h1v1h-1z`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total} ${total}" role="img" aria-label="${label}" shape-rendering="crispEdges"><rect width="${total}" height="${total}" fill="${light}"/><path d="${d}" fill="${dark}"/></svg>`;
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (modules[y][x] && !inPlate(x, y)) d += `M${x + q},${y + q}h1v1h-1z`;
+  const plate = logo
+    ? `<rect x="${x0 + q}" y="${y0 + q}" width="${plateW}" height="${plateH}" rx="1.2" fill="${light}"/>` +
+      `<image href="${logo}" x="${x0 + q + 0.6}" y="${y0 + q + 0.6}" width="${plateW - 1.2}" height="${plateH - 1.2}" preserveAspectRatio="xMidYMid meet"/>`
+    : '';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total} ${total}" role="img" aria-label="${label}" shape-rendering="crispEdges"><rect width="${total}" height="${total}" fill="${light}"/><path d="${d}" fill="${dark}"/>${plate}</svg>`;
 }

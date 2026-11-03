@@ -3,6 +3,8 @@ name: Build demo into gh-pages branch
 # Builds the site and commits the output to the `gh-pages` branch.
 # GitHub Pages is set to "Deploy from a branch: gh-pages / (root)".
 on:
+  schedule:
+    - cron: '15 1 * * *'   # daily rebuild so passed events move to Past events
   push:
     branches: [main]
   workflow_dispatch:

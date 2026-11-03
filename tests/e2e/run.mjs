@@ -141,7 +141,7 @@ test('order: cart math, options, notes, validation, manual pickup fallback, demo
   assert.equal(await p.eval(`JSON.parse(localStorage.getItem('tsb.demo.orders.v1')).length`), 1);
   assert.match(await p.text('#confirm'), /DEMO-\d{4}-0001/);
   const o = await p.eval(`JSON.parse(localStorage.getItem('tsb.demo.orders.v1'))[0]`);
-  assert.equal(o.subtotal, 5400); assert.equal(o.payment, 'pay_at_pickup'); assert.equal(o.status, 'pending'); assert.equal(o.demo, true);
+  assert.equal(o.subtotal, 5400); assert.equal(o.payment, 'cash'); assert.equal(o.fulfilment.type, 'takeaway'); assert.equal(o.status, 'pending'); assert.equal(o.demo, true);
   assert.equal(o.lines.find((l) => l.itemId === 'tzatziki').note, 'no garlic');
   clean(p);
 });
@@ -214,11 +214,14 @@ test('admin: sound is off until a user click enables it (no AudioContext before 
   clean(p);
 });
 
-test('events: placeholders only, calendar, inquiry validates and never auto-confirms', async () => {
+test('events: real flyer event, past events section, instagram carousel, calendar, inquiry never auto-confirms', async () => {
   const p = await page({ width: 1440, height: 900 });
   await p.goto(U('/en/events/'));
-  assert.equal(await p.count('.event'), 2);
-  assert.equal(await p.count('.event .tag'), 2);
+  assert.equal(await p.count('.event-feature'), 1);
+  assert.match(await p.text('.event-feature'), /Κυριακάκης/);
+  assert.equal(await p.count('.past-grid .post'), 8);
+  assert.ok((await p.count('.car-track .post')) >= 6);
+  assert.equal(await p.eval(`[...document.querySelectorAll('.post a[href*="instagram.com"]')].every(a=>a.rel.includes('noopener'))`), true);
   const m1 = await p.text('.cal-head h3');
   await p.click('#cal-next');
   assert.notEqual(await p.text('.cal-head h3'), m1);
@@ -274,4 +277,54 @@ test('no third-party requests: every network request stays on the demo origin', 
   await p.goto(U('/'));
   const external = await p.eval(`performance.getEntriesByType('resource').map(r=>r.name).filter(n=>!n.startsWith(location.origin))`);
   assert.deepEqual(external, []);
+});
+
+test('order: delivery requires an address, card is a label only, order appears in admin with type and address', async () => {
+  const p = await page({ width: 390, height: 844, mobile: true });
+  await p.goto(U('/en/order/'));
+  await p.waitFor(`document.querySelector('[data-add]')`);
+  await addItem(p, 'tzatziki', { qty: 1 });
+  await p.click('[data-mode="delivery"]');
+  assert.equal(await p.eval(`document.querySelector('#address-box').hidden`), false);
+  await p.fill('#f-name', 'Nikos T.'); await p.fill('#f-phone', '694 123 4567'); await p.fill('#f-pickup', 'around 21:00');
+  await p.eval(`document.querySelector('input[name=pay][value=card]').click()`);
+  await p.click('#submit');
+  await p.waitFor(`document.querySelector('#f-street[aria-invalid=true]')`);
+  assert.equal(await p.eval(`JSON.parse(localStorage.getItem('tsb.demo.orders.v1')||'[]').length`), 0);
+  await p.fill('#f-street', 'Agiou Ioannou'); await p.fill('#f-number', '71'); await p.fill('#f-area', 'Agia Paraskevi'); await p.fill('#f-postcode', '15342');
+  await p.click('#submit');
+  await p.waitFor(`document.querySelector('#confirm')`);
+  const o = await p.eval(`JSON.parse(localStorage.getItem('tsb.demo.orders.v1'))[0]`);
+  assert.equal(o.fulfilment.type, 'delivery'); assert.equal(o.payment, 'card'); assert.equal(o.paid, false);
+  await p.goto(U('/en/admin/'));
+  await p.fill('#a-user', 'staff'); await p.fill('#a-pass', 'staff-demo'); await p.click('#login button[type=submit]');
+  await p.waitFor(`document.querySelector('.ord')`);
+  assert.match(await p.text('.ord'), /Agiou Ioannou 71/);
+  assert.equal(await p.eval(`document.querySelector('.ord').dataset.type`), 'delivery');
+  await p.click('[data-filter="takeaway"]');
+  assert.equal(await p.count('.ord'), 0);
+  clean(p);
+});
+
+test('admin: hide / sold-out / price / image reflect on the menu and order pages; QR carries the logo', async () => {
+  const p = await page({ width: 1440, height: 900 });
+  await p.goto(U('/en/admin/'));
+  await p.fill('#a-user', 'owner'); await p.fill('#a-pass', 'owner-demo'); await p.click('#login button[type=submit]');
+  await p.click('#tab-menu');
+  await p.eval(`(()=>{const s=document.querySelector('[data-status="tzatziki"]');s.value='hidden';s.dispatchEvent(new Event('change'));const f=document.querySelector('[data-status="fava"]');f.value='soldout';f.dispatchEvent(new Event('change'));const pr=document.querySelector('[data-price="bread"]');pr.value='3.50';pr.dispatchEvent(new Event('change'));return true})()`);
+  const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  await p.eval(`(()=>{const k=JSON.parse(localStorage.getItem('tsb.demo.images.v1')||'{}');k['item:bread']='${png}';localStorage.setItem('tsb.demo.images.v1',JSON.stringify(k));return true})()`);
+  await p.goto(U('/en/menu/'));
+  assert.equal(await p.count('[data-item="tzatziki"]'), 0);
+  assert.equal(await p.eval(`document.querySelector('[data-item="fava"]').classList.contains('is-unavailable')`), true);
+  assert.match(await p.text('[data-price-for="bread"]'), /3\.50/);
+  assert.equal(await p.count('[data-item="bread"] img'), 1);
+  await p.goto(U('/en/order/'));
+  await p.waitFor(`document.querySelector('[data-add]')`);
+  assert.equal(await p.count('[data-add="tzatziki"]'), 0);
+  assert.equal(await p.eval(`document.querySelector('[data-add="fava"]').disabled`), true);
+  // QR on the menu page contains the centre logo image
+  await p.goto(U('/en/menu/'));
+  await p.waitFor(`document.querySelector('[data-qr-box] svg image')`);
+  clean(p);
 });

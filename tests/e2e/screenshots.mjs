@@ -9,7 +9,7 @@ const out = new URL('../../screenshots/', import.meta.url).pathname;
 await mkdir(out, { recursive: true });
 const srv = await start(PORT); const br = await launch();
 try {
-  const dismiss = (p) => p.eval(`document.querySelector('[data-consent=essential]')?.click(); document.querySelectorAll('img[loading=lazy]').forEach(i=>i.loading='eager'); Promise.all([...document.images].map(i=>i.complete?1:new Promise(r=>{i.onload=i.onerror=r}))).then(()=>true)`);
+  const dismiss = (p) => p.eval(`document.querySelector('[data-consent=essential]')?.click(); document.querySelectorAll('.reveal').forEach(e=>e.classList.add('in')); document.querySelectorAll('img[loading=lazy]').forEach(i=>i.loading='eager'); Promise.all([...document.images].map(i=>i.complete?1:new Promise(r=>{i.onload=i.onerror=r}))).then(()=>true)`);
   const fresh = async (opts) => { const p = await br.newPage(opts); await p.goto(U('/robots.txt')); await p.eval('localStorage.clear();sessionStorage.clear();true'); return p; };
 
   let p = await fresh({ width: 1440, height: 900 });
@@ -25,7 +25,7 @@ try {
     await p.click(`[data-add="${id}"]`); await p.waitFor(`document.querySelector('#item-dialog').open`);
     if (opt) await p.click(`#item-dialog input[value="${opt}"]`); await p.click('#d-add'); await p.waitFor(`!document.querySelector('#item-dialog').open`);
   }
-  await p.fill('#f-name', 'Maria P.'); await p.fill('#f-phone', '694 123 4567');
+  await p.click('[data-mode="delivery"]'); await p.fill('#f-name', 'Maria P.'); await p.fill('#f-phone', '694 123 4567'); await p.fill('#f-street', 'Agiou Ioannou'); await p.fill('#f-number', '71');
   await p.eval(`document.querySelector('#cart').scrollIntoView(); true`); await new Promise((r) => setTimeout(r, 200));
   await p.shot(out + '03-mobile-checkout-cart.png');
 
@@ -41,5 +41,10 @@ try {
 
   p = await fresh({ width: 1440, height: 900 });
   await p.goto(U('/events/')); await dismiss(p); await p.shot(out + '05-events.png', { full: true });
+  p = await fresh({ width: 1440, height: 900 });
+  await p.goto(U('/en/admin/')); await dismiss(p);
+  await p.fill('#a-user', 'owner'); await p.fill('#a-pass', 'owner-demo'); await p.click('#login button[type=submit]');
+  await p.click('#tab-menu'); await new Promise((r) => setTimeout(r, 200)); await p.shot(out + '06-admin-menu-images-prices.png');
+  await p.click('#tab-qr'); await p.waitFor(`document.querySelector('#q-box svg')`); await p.shot(out + '07-admin-qr-with-logo.png');
   console.log('screenshots written to', out);
 } finally { br.close(); srv.close(); }

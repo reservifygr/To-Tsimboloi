@@ -14,12 +14,14 @@ const pickup = { mode: 'manual', manualText: 'around 20:30' };
 const mk = (over = {}) => createOrder({ menu: MENU, cart: cart(), customer, pickup, idempotencyKey: 'key-0001-abcd', now: NOW, seq: 1, ...over });
 const fresh = () => new DemoAdapter(createStorage(null), () => NOW);
 
-test('order: created server-side style, totals recomputed, demo flagged, pay-at-pickup label only', () => {
+test('order: created server-side style, totals recomputed, demo flagged, cash/card labels only', () => {
   const o = mk();
   assert.equal(o.status, 'pending');
   assert.equal(o.version, 1);
   assert.equal(o.demo, true);
-  assert.equal(o.payment, 'pay_at_pickup');
+  assert.equal(o.payment, 'cash');
+  assert.equal(o.paid, false);
+  assert.deepEqual(o.fulfilment, { type: 'takeaway' });
   assert.equal(o.subtotal, 2 * 500 + 3900);
   assert.match(o.id, /^DEMO-/);
   assert.equal(o.audit.length, 1);
@@ -124,4 +126,38 @@ test('hours: unverified hours force manual pickup request; verified fixture yiel
 test('coupons: concept coupons never validate', () => {
   assert.deepEqual(validateCoupon('student-concept'), { ok: false, reason: 'not_active' });
   assert.deepEqual(validateCoupon('whatever'), { ok: false, reason: 'unknown' });
+});
+
+const addr = { street: 'Agiou Ioannou', number: '12', area: 'Agia Paraskevi', postcode: '153 42', floor: '3', bell: 'Papadakis' };
+
+test('delivery: complete address required, normalised; takeaway carries none; payment limited to cash/card labels', () => {
+  const o = mk({ fulfilment: { type: 'delivery', address: addr }, payment: 'card' });
+  assert.equal(o.fulfilment.type, 'delivery');
+  assert.equal(o.fulfilment.address.postcode, '15342');
+  assert.equal(o.payment, 'card');
+  assert.equal(o.paid, false, 'nothing is ever charged online');
+  const code = (over) => { try { mk({ fulfilment: { type: 'delivery', address: { ...addr, ...over } } }); return 'none'; } catch (e) { return e.code; } };
+  assert.equal(code({ street: '' }), 'BAD_ADDRESS_STREET');
+  assert.equal(code({ number: '' }), 'BAD_ADDRESS_NUMBER');
+  assert.equal(code({ area: '' }), 'BAD_ADDRESS_AREA');
+  assert.equal(code({ postcode: '12' }), 'BAD_ADDRESS_POSTCODE');
+  assert.throws(() => mk({ fulfilment: { type: 'drone' } }), (e) => e.code === 'BAD_FULFILMENT');
+  assert.throws(() => mk({ payment: 'bitcoin' }), (e) => e.code === 'BAD_PAYMENT');
+  assert.equal(mk({ fulfilment: { type: 'takeaway', address: addr } }).fulfilment.address, undefined);
+});
+
+test('delivery/takeaway can be switched off separately by staff; image store validates uploads', () => {
+  const a = fresh();
+  const base = { cart: cart(), customer, pickup };
+  a.saveSettings({ delivery: false });
+  assert.throws(() => a.submitOrder({ ...base, idempotencyKey: 'key-deliv-001', fulfilment: { type: 'delivery', address: addr } }), (e) => e.code === 'DELIVERY_DISABLED');
+  assert.ok(a.submitOrder({ ...base, idempotencyKey: 'key-take-0001' }).order);
+  a.saveSettings({ delivery: true, takeaway: false });
+  assert.throws(() => a.submitOrder({ ...base, idempotencyKey: 'key-take-0002' }), (e) => e.code === 'TAKEAWAY_DISABLED');
+  assert.throws(() => a.setImage('item:bread', 'javascript:alert(1)'), (e) => e.code === 'BAD_IMAGE');
+  assert.throws(() => a.setImage('item:bread', 'data:image/svg+xml;base64,AAAA'), (e) => e.code === 'BAD_IMAGE');
+  a.setImage('item:bread', 'data:image/jpeg;base64,/9j/AAAA');
+  assert.deepEqual(Object.keys(a.getImages()), ['item:bread']);
+  a.removeImage('item:bread');
+  assert.deepEqual(a.getImages(), {});
 });

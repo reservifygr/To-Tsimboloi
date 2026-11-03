@@ -129,3 +129,16 @@ This repo is **not** connected to the Reservify CRM, Yasu, or any production dat
 ## Blocking integrations before real use
 
 DNS/domain · order database + server API · real staff authentication · notification channel (dashboard realtime / printer / SMS) · payment provider (only if online payment is wanted) · operations workflow (who confirms, how fast, cancellation rules) · delivery partner (if ever) · written photo authorization.
+
+
+## Version 2 (redesign)
+
+- Night / copper / neon editorial design, mobile first, scroll animations (reduced-motion respected). System fonts, nothing third-party loads.
+- Menu page (read-only) with a QR panel: the QR carries the restaurant logo in the centre (error-correction level H, decoded by OpenCV in `tests/tools/qr-decode-check.py`). **Scan it with a real phone before printing.** Table QR: `/menu/?table=12` shows the table number only; no ordering.
+- Order page: takeaway or delivery (delivery requires a full address), cash or card. **Card is a label only: no payment is taken** (DEMO).
+- Admin (demo fixture logins on the page): orders board with takeaway/delivery filter, address and payment badges; menu tab to change price, set available / sold out / hidden and upload an image per dish; Instagram/poster image upload; takeaway/delivery switches; QR generator (SVG/PNG/print).
+- Live & Events: the real 8 Nov flyer event (names as printed; NEEDS OWNER VERIFICATION), Instagram carousel (links out, no embeds), "Past events" from the second list of posts (assumption). Post dates are derived from the shortcodes and are approximate. A daily rebuild moves passed events to Past.
+- Temporary imagery: posts without media show a designed "Photo coming soon" tile. No stock photos could be fetched from this environment.
+
+### Still needed from the owner
+Menu photos and the full drinks list, Instagram images/videos with captions and dates, confirmed opening hours, delivery area/fees/logistics, real payment provider.

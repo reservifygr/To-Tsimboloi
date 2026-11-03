@@ -7,8 +7,8 @@ import { createOrder, transition, OrderError, ACTIVE_STATUSES } from './orders.j
 
 export const MODE = 'demo'; // 'demo' | 'production' - production is intentionally not implemented in this repo
 
-const K = { orders: 'tsb.demo.orders.v1', settings: 'tsb.demo.settings.v1', seq: 'tsb.demo.seq.v1', log: 'tsb.demo.eventlog.v1' };
-export const DEFAULT_SETTINGS = { paused: false, prepMinutes: 25, overrides: {} };
+const K = { orders: 'tsb.demo.orders.v1', settings: 'tsb.demo.settings.v1', seq: 'tsb.demo.seq.v1', log: 'tsb.demo.eventlog.v1', images: 'tsb.demo.images.v1' };
+export const DEFAULT_SETTINGS = { paused: false, prepMinutes: 25, takeaway: true, delivery: true, overrides: {} };
 
 /** Storage with an in-memory fallback (private mode / blocked storage / Node tests). */
 export function createStorage(backing) {
@@ -36,6 +36,13 @@ export class DemoAdapter {
     const cur = this.getSettings();
     this.saveSettings({ overrides: { ...cur.overrides, [itemId]: { ...(cur.overrides[itemId] ?? {}), ...patch } } });
   }
+  /** Admin-uploaded images (data URIs, already downscaled by the client). key = 'item:<id>' | 'event:<id>' | 'post:<id>' | 'site:<slot>' */
+  getImages() { return this.s.get(K.images, {}); }
+  setImage(key, dataUri) {
+    if (!/^data:image\/(jpeg|png|webp);base64,/.test(String(dataUri)) || dataUri.length > 400000) throw new OrderError('BAD_IMAGE', 'Image must be a JPEG/PNG/WebP under ~300 KB');
+    this.s.set(K.images, { ...this.getImages(), [key]: dataUri }); this.#log('image_set', { key });
+  }
+  removeImage(key) { const { [key]: _gone, ...rest } = this.getImages(); this.s.set(K.images, rest); this.#log('image_removed', { key }); }
   listOrders() { return this.s.get(K.orders, []); }
   getOrder(id) { return this.listOrders().find((o) => o.id === id); }
 
@@ -43,14 +50,16 @@ export class DemoAdapter {
    * Idempotent: the same idempotencyKey always returns the same order and never creates a second one.
    * @returns {{order:any, duplicate:boolean}}
    */
-  submitOrder({ cart, customer, pickup, idempotencyKey, simulated = false }) {
+  submitOrder({ cart, customer, pickup, idempotencyKey, simulated = false, fulfilment = { type: 'takeaway' }, payment = 'cash' }) {
     const settings = this.getSettings();
     if (settings.paused && !simulated) throw new OrderError('ORDERING_PAUSED', 'Online ordering is paused right now');
+    if (!simulated && fulfilment?.type === 'takeaway' && settings.takeaway === false) throw new OrderError('TAKEAWAY_DISABLED', 'Takeaway is switched off right now');
+    if (!simulated && fulfilment?.type === 'delivery' && settings.delivery === false) throw new OrderError('DELIVERY_DISABLED', 'Delivery is switched off right now');
     const orders = this.listOrders();
     const dup = orders.find((o) => o.idempotencyKey === idempotencyKey);
     if (dup) return { order: dup, duplicate: true };
     const seq = this.s.get(K.seq, 0) + 1;
-    const order = createOrder({ menu: this.getMenu(), cart, customer, pickup, idempotencyKey, now: this.clock(), seq, simulated });
+    const order = createOrder({ menu: this.getMenu(), cart, customer, pickup, idempotencyKey, now: this.clock(), seq, simulated, fulfilment, payment });
     this.s.set(K.seq, seq);
     this.s.set(K.orders, [order, ...orders]);
     this.#log('order_created', { id: order.id, simulated });
@@ -71,7 +80,7 @@ export class DemoAdapter {
   }
 
   activeOrders() { return this.listOrders().filter((o) => ACTIVE_STATUSES.includes(o.status)); }
-  resetDemo() { [K.orders, K.settings, K.seq, K.log].forEach((k) => this.s.remove(k)); }
+  resetDemo() { [K.orders, K.settings, K.seq, K.log, K.images].forEach((k) => this.s.remove(k)); }
   eventLog() { return this.s.get(K.log, []); }
   #log(type, data) {
     const log = this.s.get(K.log, []);
