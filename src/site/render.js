@@ -176,6 +176,9 @@ function menuSection(lang) {
 }
 
 /* ---------- pages ---------- */
+// Google Maps embed supplied by the owner. The iframe is created by app.js (so it can be switched off) and always has a plain link fallback.
+const MAP_SRC = 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3143.7461790855887!2d23.825362976090734!3d38.006380471928246!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x14a19927c8ff9419%3A0xebd0af2ffc5fb72d!2sTo%20tsimboloi!5e0!3m2!1sen!2sgr!4v1793719838198!5m2!1sen!2sgr';
+const mapFrame = (lang) => `<div class="map-frame reveal" data-map="${MAP_SRC}" data-title="${esc(lang === 'el' ? 'Χάρτης Google: Το Τσιμπολόι' : 'Google map: To Tsimboloi')}"><a class="btn btn-light" href="${VENUE.mapsQuery}" target="_blank" rel="noopener">${esc(t(lang, 'cta.directions'))}</a></div>`;
 const gallery = (c, lang) => [
   ['interior.webp', lang === 'el' ? 'Το εσωτερικό του μαγαζιού με ξύλινα τραπέζια και βαρέλια' : 'The dining room with wooden tables and barrels', 'g-big'],
   ['salad-feta.webp', lang === 'el' ? 'Σαλάτα με φέτα' : 'Salad with feta', ''],
@@ -251,7 +254,7 @@ ${next ? `<section class="section next-night"><div class="wrap">${eventFeature(c
   <p><a class="big-phone" href="tel:${VENUE.phoneTel}">${esc(VENUE.phoneDisplay)}</a></p>
   <h3 class="h-small">${esc(t(lang, 'home.hoursTitle'))}</h3><p>${esc(t(lang, 'home.hoursPending'))}</p>
   <p class="cta-row"><a class="btn btn-light" href="${VENUE.mapsQuery}" rel="noopener" target="_blank">${esc(t(lang, 'cta.directions'))}</a><a class="btn btn-ghost" href="tel:${VENUE.phoneTel}">${esc(t(lang, 'cta.call'))}</a></p></div>
-  <figure class="neon-card small-neon reveal"><img src="${c.base}/images/live-music-sign.webp" alt="" width="814" height="814" loading="lazy"></figure>
+  ${mapFrame(lang)}
 </div></section>`;
   const jsonld = [{
     '@context': 'https://schema.org', '@type': 'Restaurant', name: S.el.brand, alternateName: S.en.brand,
@@ -343,7 +346,7 @@ function contactPage(c, lang) {
     <h2 class="h-small">${esc(t(lang, 'contact.social'))}</h2>
     <p><a href="${VENUE.instagram.url}" target="_blank" rel="noopener me">Instagram @${esc(VENUE.instagram.handle)}</a></p>
     <p class="small muted">${esc(t(lang, 'contact.instagramNote'))} NEEDS OWNER VERIFICATION</p>
-    <h2 class="h-small">${esc(t(lang, 'contact.mapTitle'))}</h2><p class="muted">${esc(t(lang, 'contact.mapText'))}</p>
+    <h2 class="h-small">${esc(t(lang, 'contact.mapTitle'))}</h2>${mapFrame(lang)}
   </div>
   <div><h2>${esc(t(lang, 'contact.formTitle'))}</h2><p class="muted">${esc(t(lang, 'contact.formLead'))}</p><div id="contact-root"></div></div>
 </div>`;

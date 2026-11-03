@@ -363,3 +363,6 @@ fieldset{border:0;padding:0;margin:0}
 .post:hover{transform:translateY(-6px);box-shadow:var(--shadow)}
 .neon-card img{transition:filter .6s}.neon-card:hover img{filter:saturate(1.2) brightness(1.08)}
 @media (prefers-reduced-motion:reduce){.note,.eq i{animation:none}.js .split .w>span,.js .g-item,.js .ef-poster{transform:none;clip-path:none;transition:none}.js .g-item:not(.in) img{transform:none}.split::after{width:84px;transition:none}}
+.map-frame{position:relative;min-height:320px;border-radius:var(--r);overflow:hidden;border:1px solid rgba(255,255,255,.2);background:var(--night);display:grid;place-items:center;box-shadow:var(--shadow)}
+.map-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.map-frame.has-map a{position:absolute;right:.7rem;bottom:.7rem;z-index:2}

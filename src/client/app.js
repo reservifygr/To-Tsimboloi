@@ -51,6 +51,20 @@ if (head) {
   on();
 }
 
+// Google map embed (owner-supplied). Lazy; the directions link stays as the fallback.
+if (storage.get('tsb.embeds', 'on') !== 'off') {
+  $$('[data-map]').forEach((box) => {
+    const f = document.createElement('iframe');
+    f.src = box.dataset.map;
+    f.title = box.dataset.title;
+    f.loading = 'lazy';
+    f.referrerPolicy = 'strict-origin-when-cross-origin';
+    f.setAttribute('allowfullscreen', '');
+    box.append(f);
+    box.classList.add('has-map');
+  });
+}
+
 // Word-by-word heading animation (the heading keeps its text for assistive tech; words are wrapped for the rise-in effect)
 if (!reduced) {
   $$('main h1, main h2').forEach((h) => {
