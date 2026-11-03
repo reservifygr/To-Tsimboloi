@@ -65,29 +65,8 @@ if (storage.get('tsb.embeds', 'on') !== 'off') {
   });
 }
 
-// Word-by-word heading animation (the heading keeps its text for assistive tech; words are wrapped for the rise-in effect)
-if (!reduced) {
-  $$('main h1, main h2').forEach((h) => {
-    if (h.children.length || h.closest('#admin-root, dialog') || !h.textContent.trim()) return;
-    const words = h.textContent.trim().split(/\s+/);
-    h.setAttribute('aria-label', words.join(' '));
-    h.replaceChildren();
-    words.forEach((word, i) => {
-      const outer = document.createElement('span');
-      outer.className = 'w';
-      outer.setAttribute('aria-hidden', 'true');
-      const inner = document.createElement('span');
-      inner.style.setProperty('--i', String(i));
-      inner.textContent = word;
-      outer.append(inner);
-      h.append(outer, i < words.length - 1 ? ' ' : '');
-    });
-    h.classList.add('split');
-  });
-}
-
 // Scroll reveal (content stays visible without JS and under reduced motion)
-const reveals = $$('.reveal, .split');
+const reveals = $$('.reveal, .wsplit');
 if (reduced || !('IntersectionObserver' in window)) reveals.forEach((e) => e.classList.add('in'));
 else {
   const io = new IntersectionObserver((entries) => entries.forEach((en) => {

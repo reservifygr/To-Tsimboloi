@@ -109,7 +109,7 @@ ${jsonld.map((j) => `<script type="application/ld+json">${JSON.stringify(j)}</sc
 <div class="demo-banner" role="note"><div class="wrap"><strong>${esc(S[lang].demoBadge)}</strong> ${esc(S[lang].demoBanner)}</div></div>
 ${header(c, lang, route)}
 <main id="main" tabindex="-1">
-${body}
+${route === 'admin' ? body : splitHeadings(body)}
 </main>
 ${footer(c, lang)}
 ${actionBar(c, lang)}
@@ -121,7 +121,16 @@ ${scripts.map((s) => `<script type="module" src="${A('/assets/' + s)}?v=${c.vers
 `;
 }
 
-const pageHead = (lang, key, lead, kicker = '') => `<section class="page-head"><div class="wrap">${kicker ? `<p class="kicker">${esc(kicker)}</p>` : ''}<h1 class="reveal">${esc(t(lang, key + '.h1'))}</h1>${lead ? `<p class="lead reveal">${esc(lead)}</p>` : ''}${svgLeaf}</div></section>`;
+/** Pre-split plain-text h1/h2 into words at build time, so the rise-in animation starts hidden and never flashes. */
+function splitHeadings(html) {
+  return html.replace(/<(h[12])([^>]*)>([^<]+)<\/\1>/g, (m, tag, attrs, text) => {
+    const words = text.trim().split(/\s+/);
+    const a = / class="/.test(attrs) ? attrs.replace(/ class="/, ' class="wsplit ') : `${attrs} class="wsplit"`;
+    return `<${tag}${a} aria-label="${words.join(' ')}">${words.map((w, i) => `<span class="w" aria-hidden="true"><span style="--i:${i}">${w}</span></span>`).join(' ')}</${tag}>`;
+  });
+}
+
+const pageHead =(lang, key, lead, kicker = '') => `<section class="page-head"><div class="wrap">${kicker ? `<p class="kicker">${esc(kicker)}</p>` : ''}<h1 class="reveal">${esc(t(lang, key + '.h1'))}</h1>${lead ? `<p class="lead reveal">${esc(lead)}</p>` : ''}${svgLeaf}</div></section>`;
 
 /* ---------- shared blocks ---------- */
 function postCard(c, lang, p) {
@@ -243,10 +252,10 @@ ${next ? `<section class="section next-night"><div class="wrap">${eventFeature(c
   <p class="small muted">${esc(t(lang, 'home.photoCredit'))}</p>
 </div></section>
 
-<section class="section"><div class="wrap cards2">
+<section class="section"><div class="wrap"><div class="cards2">
   <article class="card reveal"><p class="kicker">${esc(t(lang, 'home.partyKicker'))}</p><h3>${esc(t(lang, 'home.partyTitle'))}</h3><p>${esc(t(lang, 'home.partyP'))}</p><a class="link" href="${pathFor(c, lang, 'events')}#inquiry">${esc(t(lang, 'home.partyLink'))} ${arrow}</a></article>
   <article class="card reveal"><p class="kicker">${esc(t(lang, 'home.offerKicker'))}</p><h3>${esc(t(lang, 'home.offerTitle'))}</h3><p>${esc(t(lang, 'home.offerP'))}</p><span class="tag">${esc(t(lang, 'offers.existing'))}</span><br><a class="link" href="${pathFor(c, lang, 'offers')}">${esc(t(lang, 'home.offerLink'))} ${arrow}</a></article>
-</div></section>
+</div></div></section>
 
 <svg class="wave" viewBox="0 0 1440 46" preserveAspectRatio="none" aria-hidden="true" style="margin-bottom:-1px"><path d="M0 46V22C180 2 360 4 540 20s360 26 540 6 270-16 360-8v28z"/></svg>
 <section class="section dark visit" style="padding-top:2.5rem"><div class="wrap split">
