@@ -139,7 +139,7 @@ function postCard(c, lang, p) {
       ? `<video class="post-img" src="${c.base}${p.media}" ${p.poster ? `poster="${c.base}${p.poster}"` : ''} muted playsinline controls preload="none"></video>`
       : `<img class="post-img" src="${c.base}${p.media}" alt="" loading="lazy">`)
     : '';
-  return `<article class="post${p.media ? ' has-media' : ''}" data-post="${p.id}">
+  return `<article class="post${p.media ? ' has-media' : ''}" data-post="${p.id}"${p.noEmbed ? ' data-noembed' : ''}>
   <div class="post-media" data-post-media>${media}<div class="post-ph" aria-hidden="true"><span class="post-ph-date">${esc(monShort(lang, p.posted))}</span><span class="post-ph-year">${p.posted.slice(0, 4)}</span>${svgLeaf}<span class="post-ph-note">${esc(t(lang, 'social.soon'))}</span></div></div>
   <div class="post-body"><span class="post-date">${esc(fmt(t(lang, 'social.posted'), { d: monthYear(lang, p.posted) }))}</span>
   <a class="post-link" href="${p.url}" target="_blank" rel="noopener noreferrer">${esc(t(lang, 'social.open'))} ${arrow}<span class="sr-only"> (${esc(monthYear(lang, p.posted))})</span></a></div></article>`;

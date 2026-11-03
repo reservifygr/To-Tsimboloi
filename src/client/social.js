@@ -21,7 +21,7 @@ function mountEmbeds(root) {
       card.classList.add('has-media');
       return;
     }
-    if (storage.get('tsb.embeds', 'on') === 'off' || $('iframe', media)) return;
+    if (card.hasAttribute('data-noembed') || storage.get('tsb.embeds', 'on') === 'off' || $('iframe', media)) return;
     const f = document.createElement('iframe');
     f.src = `https://www.instagram.com/p/${card.dataset.post}/embed/`;
     f.loading = 'lazy';

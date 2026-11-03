@@ -7,11 +7,11 @@ const ig = (id, posted, group, extra = {}) => ({ id, url: `https://www.instagram
 
 /** Recent posts (owner's first list). Newest first. */
 export const LATEST_POSTS = [
-  ig('DfR7gYrCPV-', '2026-11-03', 'latest'),
+  ig('DfR7gYrCPV-', '2026-11-03', 'latest', { noEmbed: true }), // opens on Instagram but its embed is refused: upload an image in admin
   ig('DfP5-YgI0jG', '2026-11-02', 'latest'),
   ig('DfCkEp4IoJa', '2026-10-28', 'latest'),
   ig('DevnAweoDB9', '2026-10-21', 'latest'),
-  ig('Dee5MvNiGQM', '2026-10-14', 'latest'),
+  ig('Dee5MvNiGQM', '2026-10-14', 'latest', { noEmbed: true }), // same: embed refused by Instagram
   ig('DeKdjWmoaEV', '2026-10-06', 'latest'),
 ];
 
