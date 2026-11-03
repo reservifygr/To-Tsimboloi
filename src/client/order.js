@@ -99,7 +99,7 @@ function renderMenu() {
     const items = menu.items.filter((i) => i.cat === c.id).map((i) => {
       const from = i.optionGroups?.length ? `${T('menu.from')} ` : '';
       const img = images[`item:${i.id}`];
-      return `<div class="o-item"><div class="thumb" ${img ? '' : 'hidden'}>${img ? `<img src="${esc(img)}" alt="" loading="lazy">` : ''}</div><div class="grow"><div class="nm">${esc(L(i.name, lang))}</div><div class="pr">${from}${esc(eur(i.price, lang))}${i.available ? '' : ` · <span class="sold">${esc(T('order.soldoutNote'))}</span>`}</div></div>
+      return `<div class="o-item"><div class="thumb" ${img ? '' : 'hidden'}>${img ? `<img src="${esc(img)}" alt="" loading="lazy">` : ''}</div><div class="grow"><div class="nm">${esc(L(i.name, lang))}</div>${i.gloss?.[lang] ? `<div class="gl">${esc(i.gloss[lang])}</div>` : ''}<div class="pr">${from}${esc(eur(i.price, lang))}${i.available ? '' : ` · <span class="sold">${esc(T('order.soldoutNote'))}</span>`}</div></div>
       <button class="btn btn-ghost btn-sm" type="button" data-add="${i.id}" ${i.available ? '' : 'disabled'} aria-label="${esc(T('order.add'))}: ${esc(L(i.name, lang))}">${esc(T('order.add'))}</button></div>`;
     }).join('');
     return items ? `<section class="o-cat" id="o-${c.id}"><h2>${esc(L(c.name, lang))}</h2>${items}</section>` : '';

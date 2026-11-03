@@ -193,7 +193,12 @@ const gallery = (c, lang) => [
   ['salad-feta.webp', lang === 'el' ? 'Σαλάτα με φέτα' : 'Salad with feta', ''],
   ['pan-snails.webp', lang === 'el' ? 'Πιάτο που σερβίρεται σε τηγάνι' : 'A dish served in a pan', ''],
   ['plates-salad.webp', lang === 'el' ? 'Πιάτα μεζέδων στο τραπέζι' : 'Meze plates on the table', 'g-wide'],
-].map(([f, alt, cls]) => `<figure class="g-item ${cls} reveal"><img src="${c.base}/images/${f}" alt="${esc(alt)}" loading="lazy" width="900" height="900"></figure>`).join('');
+].map(([f, alt, cls]) => `<figure class="g-item ${cls} reveal"><img src="${c.base}/images/${f}" alt="${esc(alt)}" loading="lazy" width="900" height="900"></figure>`).join('')
+  + [
+    ['photo-1763647818263-62a9256f097c', lang === 'el' ? 'Πιατέλα με ψητά κρέατα, πατάτες και ελιές (προσωρινή εικόνα demo)' : 'Platter of grilled meats, fries and olives (temporary demo image)', ''],
+    ['photo-1706529145326-ddae87c0aafb', lang === 'el' ? 'Φαγητό και μπύρα στο τραπέζι, Αθήνα (προσωρινή εικόνα demo)' : 'Food and a beer on a table, Athens (temporary demo image)', ''],
+    ['photo-1777199264017-84af9308a41f', lang === 'el' ? 'Κρεμώδες ντιπ με αγγούρι και ελιά (προσωρινή εικόνα demo)' : 'Creamy dip with cucumber and an olive (temporary demo image)', 'g-wide'],
+  ].map(([id, alt, cls]) => `<figure class="g-item g-ext ${cls} reveal"><img data-ext="https://images.unsplash.com/${id}?auto=format&fit=crop&w=1000&h=800&q=75" alt="${esc(alt)}" loading="lazy" width="1000" height="800"><span class="demo-tag">${lang === 'el' ? 'Προσωρινή εικόνα demo' : 'Temporary demo image'}</span></figure>`).join('');
 
 function homePage(c, lang) {
   const { upcoming } = splitEvents(EVENTS, c.now);

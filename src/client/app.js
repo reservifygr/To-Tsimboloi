@@ -51,6 +51,14 @@ if (head) {
   on();
 }
 
+// Temporary demo photos (Unsplash, free licence) are loaded from Unsplash by the visitor's browser; a failed load hides the tile.
+if (storage.get('tsb.embeds', 'on') !== 'off') {
+  $$('img[data-ext]').forEach((img) => {
+    img.addEventListener('error', () => { img.closest('figure').hidden = true; });
+    img.src = img.dataset.ext;
+  });
+} else $$('img[data-ext]').forEach((img) => { img.closest('figure').hidden = true; });
+
 // Google map embed (owner-supplied). Lazy; the directions link stays as the fallback.
 if (storage.get('tsb.embeds', 'on') !== 'off') {
   $$('[data-map]').forEach((box) => {

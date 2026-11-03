@@ -75,8 +75,8 @@ test('menu: category order, QR dialog, table param, print layout hooks, override
   const p = await page({ width: 390, height: 844, mobile: true });
   await p.goto(U('/menu/?table=12'));
   const cats = await p.eval(`[...document.querySelectorAll('.menu-cat h2')].map(h=>h.textContent)`);
-  assert.deepEqual(cats, ['Σαλάτες', 'Μεζέδες', 'Ψωμί & Συνοδευτικά', 'Ψητά', 'Πιατέλες', 'Γλυκά', 'Αναψυκτικά & Νερό']);
-  assert.equal(await p.count('.dish'), 25);
+  assert.deepEqual(cats, ['Για το ξεκίνημα', 'Δροσερά Τσιμπολογήματα', 'Βουτιές με ψωμάκι', 'Στη φωτιά & στο τηγάνι', 'Θράκα & Τσουκάλι', 'Γλυκολογήματα', 'Νερό', 'Αναψυκτικά', 'Μπύρες', 'Ούζο', 'Τσίπουρο', 'Κρασιά (Βαρελίσια 500ml)', 'Κρασιά (Φιάλες)', 'Αλκοόλ (Ποτήρι)', 'Αλκοόλ (Φιάλη)']);
+  assert.equal(await p.count('.dish'), 57);
   assert.match(await p.text('[data-table-chip]'), /Τραπέζι 12/);
   await p.click('[data-open-qr]');
   await p.waitFor(`document.querySelector('#qr-dialog').open`);
@@ -93,9 +93,9 @@ test('menu: category order, QR dialog, table param, print layout hooks, override
 
 test('menu page is usable with JavaScript disabled (raw HTML)', async () => {
   const html = await (await fetch(U('/menu/'))).text();
-  assert.ok(html.includes('Σαγανάκι') && html.includes('Πιατέλες'));
+  assert.ok(html.includes('Σαγανάκι') && html.includes('Μπύρες') && html.includes('Coca Cola'));
   const en = await (await fetch(U('/en/menu/'))).text();
-  assert.ok(en.includes('Saganaki') && en.includes('Sharing Platters'));
+  assert.ok(en.includes('Saganaki') && en.includes('Beers') && en.includes('Wine by the bottle'));
 });
 
 async function addItem(p, id, { opt, qty, note } = {}) {
