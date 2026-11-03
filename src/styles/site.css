@@ -302,3 +302,15 @@ fieldset{border:0;padding:0;margin:0}
 }
 .cal-grid .has-event{background:var(--copper-bg);color:#0b1226;font-weight:700}
 .cal-grid .today.has-event{outline:2px solid var(--night)}
+
+@media screen{#receipt{display:none}}
+@media print{
+  body.print-receipt>*:not(#receipt){display:none!important}
+  body.print-receipt #receipt{display:block;width:72mm;margin:0;padding:2mm;font:12px/1.35 ui-monospace,Menlo,Consolas,monospace;color:#000;background:#fff;white-space:pre-wrap}
+  @page{margin:4mm}
+}
+.rc-acts{margin-top:.5rem}
+.qr-admin{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:2rem;align-items:start}
+.qr-preview{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:1rem;text-align:center}.qr-preview svg{width:100%;height:auto;max-width:300px}
+.qr-fields input{width:100%}.adm-row{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin:.4rem 0}
+@media (max-width:820px){.qr-admin{grid-template-columns:1fr}}

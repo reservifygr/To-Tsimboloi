@@ -6,6 +6,7 @@ import { L } from './shared/strings.js';
 import { TRANSITIONS, ROLE_TRANSITIONS, can, OrderError } from './shared/orders.js';
 import { emptyCart, addLine } from './shared/cart.js';
 import { LATEST_POSTS, PAST_POSTS, EVENTS } from './shared/social-data.js';
+import { VENUE } from './shared/content-data.js';
 import { menuQr, downloadText, downloadPng } from './qrtools.js';
 
 const FIXTURE = { owner: 'owner-demo', staff: 'staff-demo', kitchen: 'kitchen-demo' };
@@ -93,7 +94,49 @@ function orderCard(o, role, fresh) {
   <div>${esc(A('pickup'))}: ${esc(pickupText(o))}</div>
   <ul>${o.lines.map((l) => `<li>${esc(lineText(l))}</li>`).join('')}</ul>
   <div class="small muted">${esc(A('version'))}${o.version} · ${esc(fmtDateTime(o.createdAt))}</div>
+  <div class="acts rc-acts"><button class="btn btn-ghost btn-sm" type="button" data-rc="print">${esc(A('rcPrint'))}</button><button class="btn btn-ghost btn-sm" type="button" data-rc="email">${esc(A('rcEmail'))}</button><button class="btn btn-ghost btn-sm" type="button" data-rc="copy">${esc(A('rcCopy'))}</button></div>
   <div class="acts">${acts.map((to) => `<button class="btn ${to === 'rejected' || to === 'cancelled' ? 'btn-ghost' : 'btn-primary'} btn-sm" type="button" data-act="${to}">${esc(A('act.' + to))}</button>`).join('')}</div></article>`;
+}
+
+const money = (c) => eur(c, lang);
+/** Plain-text slip: used for print, copy and the email body. */
+function receiptText(o) {
+  const del = ftype(o) === 'delivery';
+  const a = o.fulfilment?.address;
+  const rows = [
+    `${L(VENUE.name, lang)} - ${A('rcTitle')}`,
+    `${lang === 'en' ? VENUE.streetEn : VENUE.street}, ${lang === 'en' ? VENUE.cityEn : VENUE.city} - ${VENUE.phoneDisplay}`,
+    '------------------------------',
+    `${o.id}  ${fmtDateTime(o.createdAt)}`,
+    `${A(ftype(o)).toUpperCase()} / ${A(o.payment ?? 'cash')}`,
+    `${A('pickup')}: ${pickupText(o)}`,
+    `${A('rcCustomer')}: ${o.customer.name}, ${o.customer.phone}`,
+  ];
+  if (del && a) rows.push(`${A('address')}: ${a.street} ${a.number}, ${a.area} ${a.postcode}${a.floor ? `, ${A('floor')} ${a.floor}` : ''}${a.bell ? `, ${A('bell')} ${a.bell}` : ''}${a.notes ? ` (${a.notes})` : ''}`);
+  rows.push('------------------------------');
+  o.lines.forEach((l) => rows.push(`${l.qty}x ${L(l.name, lang)}${l.note ? ` ("${l.note}")` : ''}  ${money(l.total)}`));
+  rows.push('------------------------------', `${A('rcTotal')}: ${money(o.subtotal)}`);
+  rows.push((o.payment ?? 'cash') === 'cash' ? `${A('rcCollect')}: ${money(o.subtotal)}` : A('rcCard'));
+  rows.push('', A('rcNotFiscal'));
+  return rows.join('\n');
+}
+
+function printReceipt(o) {
+  const box = document.createElement('pre');
+  box.id = 'receipt';
+  box.textContent = receiptText(o);
+  document.body.append(box);
+  document.body.classList.add('print-receipt');
+  const done = () => { document.body.classList.remove('print-receipt'); box.hidden = true; box.replaceChildren(); window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  window.print();
+  setTimeout(done, 1000);
+}
+
+function emailReceipt(o) {
+  const to = adapter.getSettings().courierEmail || '';
+  const subject = `${L(VENUE.name, lang)} ${o.id} (${A(ftype(o))})`;
+  location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(receiptText(o))}`;
 }
 
 function ordersView(all, role, fresh) {
@@ -180,6 +223,7 @@ function settingsView(orders, role) {
   <div class="field"><label class="checkbox"><input type="checkbox" id="s-pause" ${s.paused ? 'checked' : ''} ${dis}> <span>${esc(A('pause'))}</span></label></div>
   <div class="field"><label class="checkbox"><input type="checkbox" id="s-takeaway" ${s.takeaway !== false ? 'checked' : ''} ${dis}> <span>${esc(A('takeawayOn'))}</span></label></div>
   <div class="field"><label class="checkbox"><input type="checkbox" id="s-delivery" ${s.delivery !== false ? 'checked' : ''} ${dis}> <span>${esc(A('deliveryOn'))}</span></label></div>
+  <div class="field"><label for="s-courier">${esc(A('rcCourier'))}</label><input id="s-courier" type="email" autocomplete="off" value="${esc(s.courierEmail ?? '')}" ${can(role, 'prep_time') ? '' : 'disabled'} aria-describedby="s-courier-h"><span class="hint" id="s-courier-h">${esc(A('rcCourierHint'))}</span></div>
   <div class="field"><label for="s-prep">${esc(A('prep'))}</label><input id="s-prep" type="number" min="5" max="180" value="${s.prepMinutes}" ${can(role, 'prep_time') ? '' : 'disabled'}></div>
   ${can(role, 'prep_time') ? `<button class="btn btn-primary" type="button" id="s-save">${esc(A('save'))}</button>` : `<p class="small muted">${esc(A('forbidden'))}</p>`}</div>`;
 }
@@ -279,6 +323,13 @@ function bind(role) {
     }
     render();
   }));
+  $$('.ord [data-rc]').forEach((b) => b.addEventListener('click', async () => {
+    const o = adapter.listOrders().find((x) => x.id === b.closest('.ord').dataset.id);
+    if (!o) return;
+    if (b.dataset.rc === 'print') printReceipt(o);
+    else if (b.dataset.rc === 'email') emailReceipt(o);
+    else { try { await navigator.clipboard.writeText(receiptText(o)); toast(A('rcCopied')); } catch { toast(receiptText(o), 8000); } }
+  }));
   $$('[data-status]').forEach((s) => s.addEventListener('change', () => {
     const v = s.value;
     adapter.setOverride(s.dataset.status, { available: v === 'available', hidden: v === 'hidden' });
@@ -298,7 +349,10 @@ function bind(role) {
   $('#s-delivery')?.addEventListener('change', (e) => adapter.saveSettings({ delivery: e.target.checked }));
   $('#s-save')?.addEventListener('click', () => {
     const n = Number($('#s-prep').value);
-    if (Number.isInteger(n) && n >= 5 && n <= 180) { adapter.saveSettings({ prepMinutes: n }); toast(A('save') + ' ✓'); }
+    const em = $('#s-courier').value.trim();
+    if (em && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) { $('#s-courier').setAttribute('aria-invalid', 'true'); return; }
+    $('#s-courier').removeAttribute('aria-invalid');
+    if (Number.isInteger(n) && n >= 5 && n <= 180) { adapter.saveSettings({ prepMinutes: n, courierEmail: em }); toast(A('save') + ' ✓'); }
   });
   $('#q-gen')?.addEventListener('click', () => { qrState = { url: $('#q-url').value.trim(), table: $('#q-table').value.trim() }; drawQr(); });
   $('#q-svg')?.addEventListener('click', () => downloadText('tsimboloi-menu-qr.svg', qrSvgText));

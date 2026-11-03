@@ -66,6 +66,7 @@ test('mobile navigation at 390px opens, closes with Escape, and navigates', asyn
   await p.eval(`document.querySelector('#site-nav a[href="/menu/"]').click()`);
   await p.waitFor(`location.pathname==='/menu/'`);
   // bottom action bar present with a call link
+  await p.waitFor(`document.querySelector('.action-bar a[href^="tel:"]')?.getBoundingClientRect().height>=44`);
   assert.equal(await p.eval(`document.querySelector('.action-bar a[href^="tel:"]').getBoundingClientRect().height >= 44`), true);
   clean(p);
 });
@@ -326,5 +327,24 @@ test('admin: hide / sold-out / price / image reflect on the menu and order pages
   // QR on the menu page contains the centre logo image
   await p.goto(U('/en/menu/'));
   await p.waitFor(`document.querySelector('[data-qr-box] svg image')`);
+  clean(p);
+});
+
+test('admin: order receipt text has address and cash-to-collect; courier email is validated and used in mailto', async () => {
+  const p = await page({ width: 1440, height: 900 });
+  await p.goto(U('/en/admin/'));
+  await p.fill('#a-user', 'owner'); await p.fill('#a-pass', 'owner-demo'); await p.click('#login button[type=submit]');
+  await p.click('#sim'); await p.click('#sim');
+  await p.waitFor(`document.querySelectorAll('.ord').length>=2`);
+  await p.eval(`window.__print=0;window.print=()=>{window.__print++;window.__slip=document.querySelector('#receipt').textContent};true`);
+  await p.eval(`document.querySelector('.ord[data-type=delivery] [data-rc=print]').click()`);
+  assert.equal(await p.eval('window.__print'), 1);
+  const slip = await p.eval('window.__slip');
+  assert.match(slip, /Address:/); assert.match(slip, /NOT a tax receipt/);
+  await p.click('#tab-settings');
+  await p.fill('#s-courier', 'not-an-email'); await p.click('#s-save');
+  assert.equal(await p.eval(`document.querySelector('#s-courier').getAttribute('aria-invalid')`), 'true');
+  await p.fill('#s-courier', 'courier@example.com'); await p.click('#s-save');
+  assert.equal(await p.eval(`JSON.parse(localStorage.getItem('tsb.demo.settings.v1')).courierEmail`), 'courier@example.com');
   clean(p);
 });

@@ -7,12 +7,12 @@ let logoCache = null;
 export async function logoDataUri() {
   if (logoCache) return logoCache;
   const img = new Image();
-  img.src = `${base}/images/logo-square.webp`;
+  img.src = `${base}/images/logo-qr.webp`;
   await img.decode();
   const c = document.createElement('canvas');
-  c.width = 160;
-  c.height = 160;
-  c.getContext('2d').drawImage(img, 0, 0, 160, 160);
+  c.width = 560;
+  c.height = 288;
+  c.getContext('2d').drawImage(img, 0, 0, 560, 288);
   logoCache = c.toDataURL('image/png');
   return logoCache;
 }
@@ -20,7 +20,7 @@ export async function logoDataUri() {
 /** SVG string of the menu QR with the venue logo in the centre (error-correction level H). */
 export async function menuQr(url, label = 'QR') {
   const logo = await logoDataUri().catch(() => null); // without a logo the code is still valid (level M)
-  return qrSvg(url, { label, logo, dark: '#0b1226', logoRatio: 0.22 });
+  return qrSvg(url, { label, logo, dark: '#0b1226', logoRatio: 0.17, logoAspect: 560 / 288 });
 }
 
 function saveBlob(name, blob) {
