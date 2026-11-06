@@ -97,7 +97,7 @@ ${robots}
 <meta property="og:locale:alternate" content="${other === 'el' ? 'el_GR' : 'en_GB'}">
 <meta property="og:image" content="${c.site}${ogImage}">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#0f1830">
+<meta name="theme-color" content="#302d25">
 <link rel="icon" href="${A('/favicon-32.png')}" sizes="32x32" type="image/png">
 <link rel="icon" href="${A('/icon-192.png')}" sizes="192x192" type="image/png">
 <link rel="apple-touch-icon" href="${A('/apple-touch-icon.png')}">
@@ -105,6 +105,7 @@ ${robots}
 ${jsonld.map((j) => `<script type="application/ld+json">${JSON.stringify(j)}</script>`).join('\n')}
 </head>
 <body class="${bodyClass}" data-lang="${lang}" data-route="${route || 'home'}" data-base="${esc(c.base)}">
+<div class="brand-intro" aria-hidden="true"><div class="brand-intro-inner"><img src="${A('/images/logo-sign.webp')}" alt="" width="440" height="218"><div class="brand-intro-rule"></div><p class="brand-intro-caption">${lang === 'el' ? 'Γεύσεις · Παρέα · Μουσική' : 'Food · Friends · Music'}</p></div></div>
 <a class="skip-link" href="#main">${esc(S[lang].skip)}</a>
 <div class="demo-banner" role="note"><div class="wrap"><strong>${esc(S[lang].demoBadge)}</strong> ${esc(S[lang].demoBanner)}</div></div>
 ${header(c, lang, route)}
