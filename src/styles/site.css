@@ -226,7 +226,21 @@ fieldset{border:0;padding:0;margin:0}
 .cal{background:var(--white);border:1px solid var(--line);border-radius:var(--r);padding:1rem;max-width:520px}
 .cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem}.cal-head h3{margin:0;font-size:1.2rem}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
-.cal-grid .dow{font-size:.75rem;color:var(--muted);padding:.3rem 0}.cal-grid .day{padding:.6rem 0;border-radius:6px;font-variant-numeric:tabular-nums}.cal-grid .today{background:var(--ink);color:#fff}
+.cal-grid .dow{font-size:.75rem;color:var(--muted);padding:.3rem 0}
+.cal-grid .day{position:relative;display:flex;align-items:center;justify-content:center;min-width:0;min-height:42px;padding:.6rem .15rem;border:2px solid transparent;border-radius:8px;font:inherit;font-variant-numeric:tabular-nums;line-height:1;background:transparent;color:inherit}
+.cal-grid button.day{cursor:pointer;transition:background .15s,border-color .15s}
+.cal-grid button.day:hover{background:var(--line)}
+.cal-grid button.day:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.cal-grid .past-day{opacity:.5}
+.cal-grid .today{border-color:var(--ink)}
+.cal-grid .has-event{font-weight:700;color:var(--ink);background:color-mix(in srgb,var(--ink) 9%,transparent)}
+.cal-grid .selected,.cal-grid button.selected:hover{background:var(--ink);color:#fff}
+.cal-grid .event-dot{position:absolute;bottom:3px;width:5px;height:5px;border-radius:100%;background:currentColor}
+.cal-selection{padding:.85rem .2rem .15rem;min-height:3.5rem;font-size:.875rem;color:var(--muted)}
+.cal-selection strong{color:var(--ink)}
+.cal-selection p{margin:.3rem 0}
+@media(max-width:420px){.cal{padding:.6rem}.cal-grid .day{min-height:38px;padding:.5rem 0}}
+
 
 /* admin */
 .admin-wrap{padding-bottom:5rem}
