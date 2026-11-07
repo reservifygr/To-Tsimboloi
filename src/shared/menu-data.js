@@ -1,4 +1,4 @@
-// MENU DATA - DEMO FIXTURE.
+// MENU DATA - DEMO FIXTURE. Drinks verified against owner-approved "ΤΣΟΥΓΚΡΙΣΜΑΤΑ" PDF (7 Nov 2026); food remains unverified.
 // Source: the two photos of the owner's printed menu (food sheet + "Τσουγκρίσματα" drinks sheet), transcribed 2026-11-03.
 // Greek names, descriptions and prices are as printed. English text is our translation. Every item keeps verified:false
 // until the owner signs off prices. No allergens or dietary labels are invented.
@@ -49,11 +49,11 @@ const twoWay = (id, groupEl, groupEn, aEl, aEn, bEl, bEn, delta) => [
   },
 ];
 const sizeGroup = (delta) => twoWay('size', 'Μερίδα', 'Serving size', '2 άτομα', '2 people', '4 άτομα', '4 people', delta);
-const beerSize = () => twoWay('size', 'Μέγεθος', 'Size', '300ml', '300ml', '500ml', '500ml', 150);
 
 // English names/descriptions are our translation of the printed Greek text (owner to confirm wording).
+const OWNER_CONFIRMED_DRINK_CATEGORIES = new Set(['water','softs','beers','ouzo','tsipouro','wine-carafe','wine-bottle','spirits-glass','spirits-bottle']);
 const I = (id, cat, el, en, price, extra = {}) => ({
-  id, cat, name: { el, en }, price, available: true, verified: false, ...extra,
+  id, cat, name: { el, en }, price, available: true, verified: OWNER_CONFIRMED_DRINK_CATEGORIES.has(cat), ...extra,
 });
 const G = (el, en) => ({ gloss: { el, en } });
 
@@ -86,22 +86,22 @@ export const ITEMS = [
   I('orange-pie', 'desserts', 'Πορτοκαλόπιτα', 'Orange pie', 600, G('Χειροποίητη, μοσχομυριστή, φτιαγμένη με φρέσκα πορτοκάλια.', 'Handmade, fragrant, made with fresh oranges.')),
   I('dessert-of-day', 'desserts', 'Γλυκό ημέρας', 'Dessert of the day', 500, { ...G('Γλυκές εκπλήξεις ανάλογα με την εποχή και την έμπνευση της κουζίνας μας.', 'Sweet surprises depending on the season and the kitchen\'s inspiration.'), note: 'Varies daily; owner sets availability' }),
   // Water
-  I('water-1l', 'water', 'Νερό Εμφιαλωμένο 1L', 'Bottled water 1 L', 150),
-  I('water-florina', 'water', 'Ξινό Νερό Φλώρινης 250ml', 'Florina sparkling water 250 ml', 250),
+  I('water-1l', 'water', 'Νερό Εμφιαλωμένο 1L', 'Bottled water 1 L', 200),
+  I('water-florina', 'water', 'Ξινό Νερό Φλώρινης 250ml', 'Florina sparkling water 250 ml', 300),
   // Soft drinks
   I('cola-250', 'softs', 'Coca Cola Regular / Zero 250ml', 'Coca-Cola Regular / Zero 250 ml', 250),
-  I('fanta-250', 'softs', 'Fanta Πορτοκαλάδα 250ml', 'Fanta Orange 250 ml', 250),
+  I('fanta-250', 'softs', 'Fanta Πορτοκαλάδα 400ml', 'Fanta Orange 400 ml', 250),
   I('sprite-250', 'softs', 'Sprite 250ml', 'Sprite 250 ml', 250),
   I('schweppes-250', 'softs', 'Schweppes Soda 250ml', 'Schweppes Soda 250 ml', 250),
   I('pink-grapefruit', 'softs', 'Pink Grapefruit Soda 250ml', 'Pink Grapefruit Soda 250 ml', 350),
   // Beers
-  I('beer-fix-draft', 'beers', 'ΦΙΞ Βαρέλι', 'FIX draught', 350, { optionGroups: beerSize() }),
-  I('beer-carlsberg-draft', 'beers', 'Carlsberg Βαρέλι', 'Carlsberg draught', 350, { optionGroups: beerSize() }),
-  I('beer-fix-500', 'beers', 'ΦΙΞ 500ml', 'FIX 500 ml', 550),
-  I('beer-nisos-500', 'beers', 'Νήσος Pilsner 500ml', 'Nisos Pilsner 500 ml', 550),
-  I('beer-mythos-500', 'beers', 'Mythos 500ml', 'Mythos 500 ml', 470),
-  I('beer-kaiser-500', 'beers', 'Kaiser 500ml', 'Kaiser 500 ml', 550),
-  I('beer-fix-zero-500', 'beers', 'ΦΙΞ Άνευ 500ml', 'FIX Alcohol-free 500 ml', 490),
+  I('beer-fix-draft', 'beers', 'ΦΙΞ Βαρέλι 300ml (Μικρή)', 'FIX draught 300 ml (small)', 450),
+  I('beer-carlsberg-draft', 'beers', 'Carlsberg Βαρέλι 500ml (Μεγάλη)', 'Carlsberg draught 500 ml (large)', 600),
+  I('beer-fix-500', 'beers', 'ΦΙΞ 500ml', 'FIX 500 ml', 600),
+  I('beer-nisos-500', 'beers', 'Νήσος Pilsner 500ml', 'Nisos Pilsner 500 ml', 600),
+  I('beer-mythos-500', 'beers', 'Mythos 500ml', 'Mythos 500 ml', 600),
+  I('beer-kaiser-500', 'beers', 'Kaiser 500ml', 'Kaiser 500 ml', 600),
+  I('beer-fix-zero-500', 'beers', 'ΦΙΞ Άνευ 500ml', 'FIX Alcohol-free 500 ml', 550),
   // Ouzo
   I('ouzo-plomari', 'ouzo', 'Πλωμάρι 200ml', 'Plomari 200 ml', 1000),
   I('ouzo-varvagianni', 'ouzo', 'Βαρβαγιάννη Πράσινο 200ml', 'Varvagianni Green 200 ml', 1200),
@@ -123,14 +123,14 @@ export const ITEMS = [
   I('wine-lazaridi-red', 'wine-bottle', 'NICO LAZARIDI Ρήγας Κούπα ερυθρό', 'Nico Lazaridi Rigas Koupa red', 3000),
   I('wine-belrose', 'wine-bottle', 'Belrose Mediterranee ροζέ', 'Belrose Mediterranee rosé', 3200, { note: 'Marked *** on the printed menu' }),
   // Spirits by the glass
-  I('spirit-glass-simple', 'spirits-glass', 'Απλό', 'Standard', 700),
+  I('spirit-glass-simple', 'spirits-glass', 'Απλό', 'Standard', 800),
   I('spirit-glass-special', 'spirits-glass', 'Special', 'Special', 1000),
   I('spirit-glass-premium', 'spirits-glass', 'Premium', 'Premium', 1200),
-  I('spirit-shot', 'spirits-glass', 'Σφηνάκι', 'Shot', 250),
+  I('spirit-shot', 'spirits-glass', 'Σφηνάκι', 'Shot', 300),
   // Spirits by the bottle
-  I('spirit-bottle-simple', 'spirits-bottle', 'Απλή', 'Standard', 7000),
-  I('spirit-bottle-special', 'spirits-bottle', 'Special', 'Special', 10000),
-  I('spirit-bottle-premium', 'spirits-bottle', 'Premium', 'Premium', 12000),
+  I('spirit-bottle-simple', 'spirits-bottle', 'Απλή', 'Standard', 8000),
+  I('spirit-bottle-special', 'spirits-bottle', 'Special', 'Special', 11000),
+  I('spirit-bottle-premium', 'spirits-bottle', 'Premium', 'Premium', 14000),
 ];
 
 export const MENU = { categories: CATEGORIES, items: ITEMS };
