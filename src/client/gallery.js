@@ -3,18 +3,9 @@ import { T, $, $$, esc } from './core.js';
 
 const calm = matchMedia('(prefers-reduced-motion: reduce)').matches || navigator.connection?.saveData === true;
 
-// Hero loop: plays only when allowed and visible; a visible button pauses it (WCAG 2.2.2).
+// Hero loop: plays only while visible (and not for reduced-motion / data-saver users).
 const hv = $('[data-hero-video]');
-const hb = $('[data-hero-toggle]');
-if (hv && hb) {
-  let userPaused = calm;
-  const label = () => { const playing = !hv.paused; hb.textContent = T(playing ? 'gallery.pause' : 'gallery.play'); hb.setAttribute('aria-pressed', String(!playing)); };
-  hb.hidden = false;
-  hv.addEventListener('play', label); hv.addEventListener('pause', label);
-  hb.addEventListener('click', () => { userPaused = !userPaused; if (userPaused) hv.pause(); else hv.play().catch(() => {}); });
-  new IntersectionObserver(([e]) => { if (e.isIntersecting && !userPaused) hv.play().catch(() => {}); else hv.pause(); }, { threshold: 0.15 }).observe(hv);
-  label();
-}
+if (hv && !calm) new IntersectionObserver(([e]) => { if (e.isIntersecting) hv.play().catch(() => {}); else hv.pause(); }, { threshold: 0.15 }).observe(hv);
 
 // Gallery clips: muted, play while on screen.
 const clips = $$('[data-clip]');

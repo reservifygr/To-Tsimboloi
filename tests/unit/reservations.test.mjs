@@ -96,3 +96,13 @@ test('adapter: submit is idempotent, settings persist, lookup needs reference + 
   a.resetDemo(); assert.equal(a.listReservations().length, 0);
   assert.ok(toMin('01:30') === 90);
 });
+
+test('10+ guests: call-only by default, request mode is pending and never auto-confirmed, staff can always book', () => {
+  assert.throws(() => mk({ partySize: 14 }), (e) => e.code === 'PARTY_TOO_LARGE');
+  const settings = { largePartyMode: 'request', maxLargeParty: 30, autoConfirm: true, maxCapacity: 20 };
+  const r = mk({ partySize: 25 }, { settings });
+  assert.equal(r.status, 'pending'); assert.equal(r.large, true);
+  assert.throws(() => mk({ partySize: 31 }, { settings }), (e) => e.code === 'PARTY_TOO_LARGE');
+  const st = mk({ partySize: 45, consent: false, time: '20:10' }, { settings, staff: true });
+  assert.equal(st.status, 'confirmed'); assert.equal(st.source, 'staff');
+});

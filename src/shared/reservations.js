@@ -27,7 +27,9 @@ export const RES_DEFAULTS = {
   enabled: true,
   verified: false,           // set to true once the owner has confirmed the numbers below
   maxCapacity: 60,           // seats that can be occupied at the same moment
-  maxPartySize: 10,          // bigger groups are asked to call / send an event request
+  maxPartySize: 10,          // largest group that books a table online automatically
+  largePartyMode: 'call',    // above that: 'call' = ask them to phone us, 'request' = take a request the venue approves personally
+  maxLargeParty: 40,         // biggest group accepted as a request when largePartyMode is 'request'
   slotMinutes: 30,           // spacing of the bookable times
   durationMinutes: 90,       // how long a table is held for one booking
   bufferMinutes: 15,         // reset time after every booking
@@ -83,11 +85,12 @@ export function seatsAt(reservations, date, at, s) {
 }
 
 /** Why a slot cannot be booked, or null when it can. */
-export function slotProblem({ date, time, partySize, settings: s, reservations, now = Date.now() }) {
+export function slotProblem({ date, time, partySize, settings: s, reservations, now = Date.now(), large = false }) {
   const ln = localNow(now);
   const start = toMin(time);
   if (date < ln.date || (date === ln.date && start < ln.min + s.leadMinutes)) return 'notice';
   if (date > addDays(ln.date, s.maxAdvanceDays)) return 'too_far';
+  if (large) return null; // big groups are approved by a person, so they are not limited by the automatic seat count
   const block = s.durationMinutes + s.bufferMinutes;
   // peak occupancy over the booking's window: check its start and every other booking's start inside it
   const points = [start, ...reservations.filter((r) => r.date === date && holds(r, s)).map((r) => toMin(r.time)).filter((m) => m > start && m < start + block)];
@@ -101,7 +104,7 @@ export function slotProblem({ date, time, partySize, settings: s, reservations, 
 export function availability({ date, partySize, settings, reservations, now = Date.now() }) {
   const s = mergeSettings(settings);
   return slotTimes(date, s).map((time) => {
-    const reason = slotProblem({ date, time, partySize, settings: s, reservations, now });
+    const reason = slotProblem({ date, time, partySize, settings: s, reservations, now, large: partySize > s.maxPartySize });
     return { time, available: !reason, reason };
   });
 }
@@ -110,7 +113,7 @@ export function availability({ date, partySize, settings, reservations, now = Da
 export const isClosed = (date, settings) => slotTimes(date, mergeSettings(settings)).length === 0;
 
 /** @returns {object} a new reservation (status pending, or confirmed when autoConfirm) */
-export function createReservation(input, { settings, reservations, now = Date.now(), seq = 1 }) {
+export function createReservation(input, { settings, reservations, now = Date.now(), seq = 1, staff = false }) {
   const s = mergeSettings(settings);
   if (!s.enabled) throw new OrderError('RES_DISABLED', 'Online bookings are switched off right now');
   const { name, phone } = validateCustomer({ name: input.name, phone: input.phone });
@@ -118,21 +121,25 @@ export function createReservation(input, { settings, reservations, now = Date.no
   if (email && !EMAIL_RE.test(email)) throw new OrderError('BAD_EMAIL', 'Invalid email');
   const partySize = Number(input.partySize);
   if (!Number.isInteger(partySize) || partySize < 1) throw new OrderError('BAD_SIZE', 'Choose the number of guests');
-  if (partySize > s.maxPartySize) throw new OrderError('PARTY_TOO_LARGE', `For more than ${s.maxPartySize} guests please call us`);
+  const large = partySize > s.maxPartySize;
+  if (large && !staff && (s.largePartyMode !== 'request' || partySize > s.maxLargeParty)) throw new OrderError('PARTY_TOO_LARGE', `For more than ${s.maxPartySize} guests please call us`);
   const date = clean(input.date, 10); const time = clean(input.time, 5);
   if (!DATE_RE.test(date) || Number.isNaN(Date.parse(date)) || !TIME_RE.test(time)) throw new OrderError('BAD_DATE', 'Pick a date and a time');
-  if (!slotTimes(date, s).includes(time)) throw new OrderError('SLOT_UNAVAILABLE', 'That time is not available');
-  const problem = slotProblem({ date, time, partySize, settings: s, reservations, now });
-  if (problem) throw new OrderError('SLOT_UNAVAILABLE', `That time is no longer available (${problem})`);
-  if (input.consent !== true) throw new OrderError('NO_CONSENT', 'Consent is required');
+  if (!staff) {
+    if (!slotTimes(date, s).includes(time)) throw new OrderError('SLOT_UNAVAILABLE', 'That time is not available');
+    const problem = slotProblem({ date, time, partySize, settings: s, reservations, now, large });
+    if (problem) throw new OrderError('SLOT_UNAVAILABLE', `That time is no longer available (${problem})`);
+  }
+  if (!staff && input.consent !== true) throw new OrderError('NO_CONSENT', 'Consent is required');
   const at = new Date(now).toISOString();
-  const status = s.autoConfirm ? 'confirmed' : 'pending';
+  const status = staff || (s.autoConfirm && !large) ? 'confirmed' : 'pending';
   return {
     id: `DEMO-RES-${String(seq).padStart(4, '0')}`, status, version: 1, demo: true,
+    source: staff ? 'staff' : 'online', ...(large ? { large: true } : {}),
     name, phone, ...(email ? { email } : {}), partySize, date, time,
     occasion: clean(input.occasion, 40), notes: clean(input.notes, 300),
     idempotencyKey: clean(input.idempotencyKey, 80) || null, createdAt: at, updatedAt: at,
-    history: [{ at, to: status, actor: s.autoConfirm ? 'system' : 'customer', reason: null }],
+    history: [{ at, to: status, actor: staff ? 'staff' : s.autoConfirm && !large ? 'system' : 'customer', reason: null }],
   };
 }
 

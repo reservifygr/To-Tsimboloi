@@ -168,7 +168,6 @@ function eventFeature(c, lang, e, { compact = false } = {}) {
     <p class="ef-lineup-h">${esc(t(lang, 'events.lineup'))}</p>
     <ul class="lineup">${e.artists.map((a) => `<li>${esc(a)}</li>`).join('')}</ul>
     <p><a class="btn btn-primary" href="tel:${VENUE.phoneTel}">${esc(t(lang, 'home.nextCta'))}</a></p>
-    <p class="small muted">${esc(e.source.includes('NEEDS') ? 'NEEDS OWNER VERIFICATION: names and time as printed on the venue poster.' : '')}</p>
   </div></article>`;
 }
 
@@ -195,18 +194,11 @@ const MAP_SRC = 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3143.7461
 const mapFrame = (lang) => `<div class="map-frame reveal" data-map="${MAP_SRC}" data-title="${esc(lang === 'el' ? 'Χάρτης Google: Το Τσιμπολόι' : 'Google map: To Tsimboloi')}"><a class="btn btn-light" href="${VENUE.mapsQuery}" target="_blank" rel="noopener">${esc(t(lang, 'cta.directions'))}</a></div>`;
 const photo = (c, lang, f) => PHOTOS.find((p) => p.f === f);
 const tile = (c, lang, p, cls = '') => `<figure class="g-item ${cls} reveal"><a href="${c.base}/media/${p.f}.webp" data-lb="${esc(L({ el: p.el, en: p.en }, lang))}" aria-label="${esc(t(lang, 'gallery.open'))}: ${esc(L({ el: p.el, en: p.en }, lang))}"><img src="${c.base}/media/${p.f}-sm.webp" alt="${esc(L({ el: p.el, en: p.en }, lang))}" loading="lazy" width="${p.w}" height="${p.h}"></a></figure>`;
-const foodTile = (c, lang, f, el, en, cls = '') => `<figure class="g-item ${cls} reveal"><img src="${c.base}/images/${f}" alt="${esc(lang === 'el' ? el : en)}" loading="lazy" width="900" height="900"></figure>`;
+const rm = (c, lang, f, cls) => { const p = photo(c, lang, f); const cap = L({ el: p.el, en: p.en }, lang); return `<figure class="rm ${cls} reveal"><a href="${c.base}/media/${p.f}.webp" data-lb="${esc(cap)}" aria-label="${esc(t(lang, 'gallery.open'))}: ${esc(cap)}"><img src="${c.base}/media/${p.f}-sm.webp" alt="${esc(cap)}" width="${p.w}" height="${p.h}" loading="lazy"></a></figure>`; };
 const gallery = (c, lang) => [
-  tile(c, lang, photo(c, lang, 'hall'), 'g-big'),
-  foodTile(c, lang, 'salad-feta.webp', 'Σαλάτα με φέτα', 'Salad with feta'),
-  foodTile(c, lang, 'pan-snails.webp', 'Πιάτο που σερβίρεται σε τηγάνι', 'A dish served in a pan'),
-  foodTile(c, lang, 'plates-salad.webp', 'Πιάτα μεζέδων στο τραπέζι', 'Meze plates on the table', 'g-wide'),
-  tile(c, lang, photo(c, lang, 'lamps'), 'g-tall'),
-  tile(c, lang, photo(c, lang, 'bar-barrels'), 'g-wide'),
-  tile(c, lang, photo(c, lang, 'stage-neon')),
-  tile(c, lang, photo(c, lang, 'window-booth')),
-  tile(c, lang, photo(c, lang, 'sign-night')),
-  tile(c, lang, photo(c, lang, 'hall-night')),
+  rm(c, lang, 'hall-bar', 'rm-a'), rm(c, lang, 'neon-corner', 'rm-b'), rm(c, lang, 'place-setting', 'rm-c'),
+  rm(c, lang, 'chandeliers', 'rm-p'), rm(c, lang, 'stage-view', 'rm-p'), rm(c, lang, 'long-table-lamps', 'rm-p'),
+  rm(c, lang, 'shopfront-night', 'rm-d'), rm(c, lang, 'bar-wide', 'rm-e'), rm(c, lang, 'dining-corner', 'rm-f'),
 ].join('');
 
 function galleryPage(c, lang) {
@@ -228,7 +220,6 @@ function homePage(c, lang) {
   const body = `
 <section class="hero2" data-hero>
   <video class="hero-bg" muted loop playsinline preload="metadata" poster="${c.base}/media/hero-poster.jpg" aria-hidden="true" tabindex="-1" data-hero-video><source src="${c.base}/media/hero.mp4" type="video/mp4"></video>
-  <button class="hero-pause" type="button" data-hero-toggle hidden aria-pressed="false">${esc(t(lang, 'gallery.pause'))}</button>
   <div class="hero-veil"></div>
   <div class="wrap hero-grid">
     <div class="hero-copy">
@@ -261,21 +252,13 @@ ${next ? `<section class="section next-night"><div class="wrap">${eventFeature(c
 <section class="section dark menu-tease"><div class="wrap split">
   <div><p class="kicker">${esc(t(lang, 'home.menuKicker'))}</p><h2 class="reveal">${esc(t(lang, 'home.menuTitle'))}</h2><p class="reveal">${esc(t(lang, 'home.menuLead'))}</p>
   <ul class="sig-list">${sigHtml}</ul>
-  <p class="small muted">${esc(t(lang, 'home.sigNote'))}</p>
   <div class="cta-row"><a class="btn btn-light" href="${pathFor(c, lang, 'menu')}">${esc(t(lang, 'home.sigAll'))}</a><a class="btn btn-primary" href="${pathFor(c, lang, 'order')}">${esc(t(lang, 'cta.order'))}</a></div></div>
   <figure class="tilt reveal"><img src="${c.base}/images/plates-salad.webp" alt="${lang === 'el' ? 'Πιάτα μεζέδων στο τραπέζι' : 'Meze plates on the table'}" width="900" height="900" loading="lazy"></figure>
 </div></section>
 
-<section class="section"><div class="wrap">
-  <div class="sec-head"><div><p class="kicker">${esc(t(lang, 'home.socialKicker'))}</p><h2 class="reveal">${esc(t(lang, 'home.socialTitle'))}</h2></div><a class="link" href="${VENUE.instagram.url}" target="_blank" rel="noopener me">${esc(t(lang, 'social.follow'))} ${arrow}</a></div>
-  ${carousel(c, lang, 'home-carousel', LATEST_POSTS)}
-  <p class="small muted">${esc(t(lang, 'social.note'))}</p>
-</div></section>
-
 <section class="section tint"><div class="wrap">
   <p class="kicker">${esc(t(lang, 'home.galleryKicker'))}</p><h2 class="reveal">${esc(t(lang, 'home.galleryTitle'))}</h2>
-  <div class="gallery">${gallery(c, lang)}</div>
-  <p class="small muted">${esc(t(lang, 'home.photoCredit'))}</p>
+  <div class="room">${gallery(c, lang)}</div>
 </div></section>
 
 <section class="section"><div class="wrap"><div class="cards2">
@@ -388,7 +371,7 @@ function contactPage(c, lang) {
     <p><a class="btn btn-primary" href="tel:${VENUE.phoneTel}">${esc(t(lang, 'cta.call'))}</a> <a class="btn btn-ghost" href="${VENUE.mapsQuery}" target="_blank" rel="noopener">${esc(t(lang, 'contact.openGoogle'))}</a> <a class="btn btn-ghost" href="${VENUE.osmQuery}" target="_blank" rel="noopener">${esc(t(lang, 'contact.openOsm'))}</a></p>
     <h2 class="h-small">${esc(t(lang, 'contact.social'))}</h2>
     <p><a href="${VENUE.instagram.url}" target="_blank" rel="noopener me">Instagram @${esc(VENUE.instagram.handle)}</a></p>
-    <p class="small muted">${esc(t(lang, 'contact.instagramNote'))} NEEDS OWNER VERIFICATION</p>
+    <p class="small muted">${esc(t(lang, 'contact.instagramNote'))}</p>
     <h2 class="h-small">${esc(t(lang, 'contact.mapTitle'))}</h2>${mapFrame(lang)}
   </div>
   <div><h2>${esc(t(lang, 'contact.formTitle'))}</h2><p class="muted">${esc(t(lang, 'contact.formLead'))}</p><div id="contact-root"></div></div>

@@ -10,19 +10,22 @@ const cfg = () => adapter.getReservationSettings();
 const fmtDate = (d) => new Intl.DateTimeFormat(lang === 'el' ? 'el-GR' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(`${d}T12:00:00Z`));
 const guestLabel = (n) => (n === 1 ? R('guestOne') : R('guestMany', { n }));
 let key = uuid();
-let state = { party: 2, date: '', time: '' };
+let state = { party: 2, date: '', time: '', big: false };
 const field = (id, label, control, hint = '') => `<div class="field"><label for="${id}">${esc(label)}</label>${control}${hint ? `<span class="hint">${esc(hint)}</span>` : ''}</div>`;
 
 function formHtml() {
   const s = cfg();
   const today = localNow().date;
   if (!s.enabled) return `<p class="notice strong">${esc(R('errors.RES_DISABLED'))} <a href="tel:${esc(phone.replace(/\s/g, ''))}">${esc(phone)}</a></p>`;
-  const sizes = Array.from({ length: s.maxPartySize }, (_, i) => i + 1).map((n) => `<option value="${n}" ${n === state.party ? 'selected' : ''}>${esc(guestLabel(n))}</option>`).join('');
+  const sizes = Array.from({ length: s.maxPartySize }, (_, i) => i + 1).map((n) => `<option value="${n}" ${!state.big && n === state.party ? 'selected' : ''}>${esc(guestLabel(n))}</option>`).join('')
+    + `<option value="more" ${state.big ? 'selected' : ''}>${esc(R('guestsLarge', { n: s.maxPartySize + 1 }))}</option>`;
   return `<form id="res-form" class="res-form" novalidate>
   <div class="res-row">
-    ${field('r-party', R('guests'), `<select id="r-party">${sizes}</select>`, R('guestsMore', { n: s.maxPartySize, phone }))}
+    ${field('r-party', R('guests'), `<select id="r-party">${sizes}</select>`, '')}
     ${field('r-date', R('date'), `<input id="r-date" type="date" min="${today}" max="${addDays(today, s.maxAdvanceDays)}" value="${esc(state.date)}">`)}
   </div>
+  <div id="big-box"></div>
+  <div id="res-rest">
   <fieldset class="slots-box"><legend>${esc(R('time'))}</legend><div id="slots" aria-live="polite"></div></fieldset>
   <div class="res-row">
     ${field('r-name', R('name'), '<input id="r-name" type="text" autocomplete="name" maxlength="80">')}
@@ -36,7 +39,24 @@ function formHtml() {
   <div class="field"><label class="checkbox"><input type="checkbox" id="r-consent"> <span>${esc(R('consent'))}</span></label></div>
   <p class="form-msg error" role="alert"></p>
   <button class="btn btn-primary" type="submit" id="r-submit">${esc(R('submit'))}</button>
+  </div>
 </form>`;
+}
+
+function renderBig() {
+  const box = $('#big-box'); const rest = $('#res-rest'); if (!box) return;
+  const s = cfg();
+  if (!state.big) { box.innerHTML = ''; rest.hidden = false; return; }
+  const tel = esc(phone.replace(/\s/g, ''));
+  if (s.largePartyMode !== 'request') {
+    rest.hidden = true;
+    box.innerHTML = `<div class="big-party"><h3>${esc(R('bigCallTitle', { n: s.maxPartySize + 1 }))}</h3><p>${esc(R('bigCallText'))}</p><p><a class="btn btn-primary" href="tel:${tel}">${esc(R('bigCallBtn', { phone }))}</a></p></div>`;
+    return;
+  }
+  rest.hidden = false;
+  if (state.party <= s.maxPartySize) state.party = s.maxPartySize + 1;
+  box.innerHTML = `<div class="big-party"><h3>${esc(R('bigReqTitle', { n: s.maxPartySize + 1 }))}</h3><p>${esc(R('bigReqText', { phone }))}</p>${field('r-big', R('bigCount', { a: s.maxPartySize + 1, b: s.maxLargeParty }), `<input id="r-big" type="number" min="${s.maxPartySize + 1}" max="${s.maxLargeParty}" value="${state.party}">`)}</div>`;
+  $('#r-big').addEventListener('input', (e) => { const v = Math.round(Number(e.target.value)); if (v >= s.maxPartySize + 1 && v <= s.maxLargeParty) { state.party = v; renderSlots(); } });
 }
 
 function renderSlots() {
@@ -63,7 +83,7 @@ function statusBlock(r) {
 function success(r) {
   root.innerHTML = `<div class="success" role="status" tabindex="-1" id="res-ok"><h2>${esc(R('doneTitle'))}</h2><p>${esc(R(r.status === 'confirmed' ? 'doneConfirmed' : 'donePending'))}</p>${statusBlock(r)}<p><button class="btn btn-ghost" type="button" id="res-again">${esc(R('again'))}</button></p></div>${lookupHtml()}`;
   $('#res-ok').focus();
-  $('#res-again').addEventListener('click', () => { state = { party: 2, date: '', time: '' }; key = uuid(); mount(); });
+  $('#res-again').addEventListener('click', () => { state = { party: 2, date: '', time: '', big: false }; key = uuid(); mount(); });
   bindLookup();
 }
 
@@ -88,7 +108,7 @@ function mount() {
   root.innerHTML = formHtml() + lookupHtml();
   const form = $('#res-form');
   if (form) {
-    $('#r-party').addEventListener('change', (e) => { state.party = Number(e.target.value); renderSlots(); });
+    $('#r-party').addEventListener('change', (e) => { state.big = e.target.value === 'more'; if (!state.big) state.party = Number(e.target.value); renderBig(); renderSlots(); });
     $('#r-date').addEventListener('change', (e) => { state.date = e.target.value; renderSlots(); });
     form.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -106,7 +126,7 @@ function mount() {
         if (input) { setFieldError(input, errText(err.code)); input.focus(); } else { $('.form-msg', form).textContent = errText(err.code); if (err.code === 'SLOT_UNAVAILABLE') renderSlots(); }
       }
     });
-    renderSlots();
+    renderBig(); renderSlots();
   }
   bindLookup();
 }

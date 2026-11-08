@@ -76,5 +76,15 @@ try {
   await p.fill('#a-user', 'owner'); await p.fill('#a-pass', 'owner-demo'); await p.click('#login button[type=submit]');
   await p.click('#tab-menu'); await new Promise((r) => setTimeout(r, 200)); await p.shot(out + '06-admin-menu-images-prices.png');
   await p.click('#tab-qr'); await p.waitFor(`document.querySelector('#q-box svg')`); await p.shot(out + '07-admin-qr-with-logo.png');
+  // reservations in the admin, with a few seeded bookings
+  p = await fresh({ width: 1440, height: 900 });
+  await p.goto(U('/en/admin/')); await dismiss(p);
+  await p.eval(`(()=>{const d=new Date(Date.now()+2*3600000).toLocaleDateString('en-CA',{timeZone:'Europe/Athens'});const mk=(i,time,n,name,st,x={})=>({id:'DEMO-RES-000'+i,status:st,version:1,demo:true,source:'online',name,phone:'694 123 456'+i,partySize:n,date:d,time,occasion:'',notes:'',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),history:[],...x});localStorage.setItem('tsb.demo.reservations.v1',JSON.stringify([mk(1,'19:30',4,'Maria P.','confirmed',{occasion:'Birthday',notes:'Window table'}),mk(2,'20:00',2,'Nikos K.','pending'),mk(3,'20:00',14,'Eleni S.','pending',{large:true,notes:'Company dinner'}),mk(4,'21:00',6,'Giorgos D.','seated'),mk(5,'21:30',3,'Anna T.','confirmed',{source:'staff'})]));return true})()`);
+  await p.fill('#a-user', 'owner'); await p.fill('#a-pass', 'owner-demo'); await p.click('#login button[type=submit]');
+  await p.click('#tab-reservations'); await p.waitFor(`document.querySelector('.rv-row')`); await new Promise((r) => setTimeout(r, 300)); await p.shot(out + '08-admin-reservations.png', { full: true });
+  p = await fresh({ width: 390, height: 844, mobile: true, scale: 2 });
+  await p.goto(U('/reserve/')); await dismiss(p);
+  await p.eval(`(()=>{const s=document.querySelector('#r-party');s.value='more';s.dispatchEvent(new Event('change',{bubbles:true}));return true})()`);
+  await p.shot(out + '08b-mobile-reserve-large-party.png');
   console.log('screenshots written to', out);
 } finally { br.close(); srv.close(); }

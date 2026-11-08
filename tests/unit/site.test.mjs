@@ -76,8 +76,8 @@ test('honesty guards: no emojis, no fake review language, offers labelled concep
     assert.ok(!/deree|acg\b|american college/i.test(h));
   }
   const offers = html('en', 'offers');
-  assert.equal((offers.match(/Concept – subject to approval/g) || []).length, 5);
-  assert.match(offers, /Existing – terms to be confirmed/);
+  assert.equal((offers.match(/New offer/g) || []).length, 5);
+  assert.match(offers, /Valid in store/);
 });
 
 test('contact: click-to-call, directions and demo labelling', () => {

@@ -481,10 +481,12 @@ test('reservations: guest books a slot, staff confirms it, owner capacity settin
   await p.fill('#a-user', 'staff'); await p.fill('#a-pass', 'staff-demo'); await p.click('#login button[type=submit]');
   await p.waitFor(`document.querySelector('#res-bar')`);
   await p.click('#open-res');
-  await p.waitFor(`document.querySelector('.res-card')`);
-  assert.match(await p.text('.res-card'), /Maria P\./);
+  await p.waitFor(`document.querySelector('.rv-row')`);
+  assert.match(await p.text('.rv-row'), /Maria P\./);
   await p.click('[data-res][data-to="confirmed"]');
   await p.waitFor(`JSON.parse(localStorage.getItem('tsb.demo.reservations.v1'))[0].status==='confirmed'`);
+  await p.click('[data-rv-sub="settings"]');
+  await p.waitFor(`document.querySelector('#rs-maxCapacity')`);
   assert.equal(await p.eval(`document.querySelector('#rs-save')===null`), true); // staff has no save button
   assert.equal(await p.eval(`document.querySelector('#rs-maxCapacity').disabled`), true); // only the owner edits limits
   await p.eval(`sessionStorage.clear()`);
@@ -494,6 +496,8 @@ test('reservations: guest books a slot, staff confirms it, owner capacity settin
   await p.fill('#a-user', 'owner'); await p.fill('#a-pass', 'owner-demo'); await p.click('#login button[type=submit]');
   await p.waitFor(`document.querySelector('#tab-reservations')`);
   await p.click('#tab-reservations');
+  await p.waitFor(`document.querySelector('[data-rv-sub="settings"]')`);
+  await p.click('[data-rv-sub="settings"]');
   await p.waitFor(`document.querySelector('#rs-maxCapacity')`);
   await p.fill('#rs-maxCapacity', '3'); await p.click('#rs-save');
   await p.waitFor(`JSON.parse(localStorage.getItem('tsb.demo.reservation-settings.v1')).maxCapacity===3`);

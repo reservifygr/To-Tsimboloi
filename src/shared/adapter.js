@@ -99,12 +99,12 @@ export class DemoAdapter {
   listReservations() { return this.s.get(K.res, []); }
   getReservation(id) { return this.listReservations().find((r) => r.id === id); }
   /** Idempotent on idempotencyKey. @returns {{reservation:any, duplicate:boolean}} */
-  submitReservation(input) {
+  submitReservation(input, { staff = false } = {}) {
     const list = this.listReservations();
     const dup = input.idempotencyKey && list.find((r) => r.idempotencyKey === input.idempotencyKey);
     if (dup) return { reservation: dup, duplicate: true };
     const seq = this.s.get(K.resSeq, 0) + 1;
-    const reservation = createReservation(input, { settings: this.getReservationSettings(), reservations: list, now: this.clock(), seq });
+    const reservation = createReservation(input, { settings: this.getReservationSettings(), reservations: list, now: this.clock(), seq, staff });
     this.s.set(K.resSeq, seq);
     this.s.set(K.res, [reservation, ...list]);
     this.#log('reservation_created', { id: reservation.id, status: reservation.status });
