@@ -8,7 +8,7 @@ import { start } from '../../scripts/serve.mjs';
 const PORT = 4300 + Math.floor(Math.random() * 400);
 const U = (p) => `http://localhost:${PORT}${p}`;
 let srv; let br;
-const ROUTES = ['', 'menu/', 'order/', 'events/', 'offers/', 'contact/', 'privacy/', 'admin/'];
+const ROUTES = ['', 'menu/', 'order/', 'events/', 'gallery/', 'offers/', 'contact/', 'privacy/', 'admin/'];
 
 before(async () => { srv = await start(PORT); br = await launch(); });
 after(() => { br?.close(); srv?.close(); });

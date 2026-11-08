@@ -5,10 +5,11 @@ import { MENU } from '../shared/menu-data.js';
 import { VENUE, OFFERS } from '../shared/content-data.js';
 import { LATEST_POSTS, PAST_POSTS, EVENTS, splitEvents } from '../shared/social-data.js';
 import { eur } from '../shared/money.js';
+import { PHOTOS, CLIPS } from '../shared/gallery-data.js';
 
-export const ROUTES = ['', 'menu', 'order', 'events', 'offers', 'contact', 'privacy', 'admin'];
-export const NAV = ['', 'menu', 'order', 'events', 'offers', 'contact'];
-const NAV_KEY = { '': 'home', menu: 'menu', order: 'order', events: 'events', offers: 'offers', contact: 'contact' };
+export const ROUTES = ['', 'menu', 'order', 'events', 'gallery', 'offers', 'contact', 'privacy', 'admin'];
+export const NAV = ['', 'menu', 'order', 'events', 'gallery', 'offers', 'contact'];
+const NAV_KEY = { '': 'home', menu: 'menu', order: 'order', events: 'events', gallery: 'gallery', offers: 'offers', contact: 'contact' };
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -191,17 +192,32 @@ function menuSection(lang) {
 // Google Maps embed supplied by the owner. The iframe is created by app.js (so it can be switched off) and always has a plain link fallback.
 const MAP_SRC = 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3143.7461790855887!2d23.825362976090734!3d38.006380471928246!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x14a19927c8ff9419%3A0xebd0af2ffc5fb72d!2sTo%20tsimboloi!5e0!3m2!1sen!2sgr!4v1793719838198!5m2!1sen!2sgr';
 const mapFrame = (lang) => `<div class="map-frame reveal" data-map="${MAP_SRC}" data-title="${esc(lang === 'el' ? 'Χάρτης Google: Το Τσιμπολόι' : 'Google map: To Tsimboloi')}"><a class="btn btn-light" href="${VENUE.mapsQuery}" target="_blank" rel="noopener">${esc(t(lang, 'cta.directions'))}</a></div>`;
+const photo = (c, lang, f) => PHOTOS.find((p) => p.f === f);
+const tile = (c, lang, p, cls = '') => `<figure class="g-item ${cls} reveal"><a href="${c.base}/media/${p.f}.webp" data-lb="${esc(L({ el: p.el, en: p.en }, lang))}" aria-label="${esc(t(lang, 'gallery.open'))}: ${esc(L({ el: p.el, en: p.en }, lang))}"><img src="${c.base}/media/${p.f}-sm.webp" alt="${esc(L({ el: p.el, en: p.en }, lang))}" loading="lazy" width="${p.w}" height="${p.h}"></a></figure>`;
+const foodTile = (c, lang, f, el, en, cls = '') => `<figure class="g-item ${cls} reveal"><img src="${c.base}/images/${f}" alt="${esc(lang === 'el' ? el : en)}" loading="lazy" width="900" height="900"></figure>`;
 const gallery = (c, lang) => [
-  ['interior.webp', lang === 'el' ? 'Το εσωτερικό του μαγαζιού με ξύλινα τραπέζια και βαρέλια' : 'The dining room with wooden tables and barrels', 'g-big'],
-  ['salad-feta.webp', lang === 'el' ? 'Σαλάτα με φέτα' : 'Salad with feta', ''],
-  ['pan-snails.webp', lang === 'el' ? 'Πιάτο που σερβίρεται σε τηγάνι' : 'A dish served in a pan', ''],
-  ['plates-salad.webp', lang === 'el' ? 'Πιάτα μεζέδων στο τραπέζι' : 'Meze plates on the table', 'g-wide'],
-].map(([f, alt, cls]) => `<figure class="g-item ${cls} reveal"><img src="${c.base}/images/${f}" alt="${esc(alt)}" loading="lazy" width="900" height="900"></figure>`).join('')
-  + [
-    ['photo-1763647818263-62a9256f097c', lang === 'el' ? 'Πιατέλα με ψητά κρέατα, πατάτες και ελιές (προσωρινή εικόνα demo)' : 'Platter of grilled meats, fries and olives (temporary demo image)', ''],
-    ['photo-1706529145326-ddae87c0aafb', lang === 'el' ? 'Φαγητό και μπύρα στο τραπέζι, Αθήνα (προσωρινή εικόνα demo)' : 'Food and a beer on a table, Athens (temporary demo image)', ''],
-    ['photo-1777199264017-84af9308a41f', lang === 'el' ? 'Κρεμώδες ντιπ με αγγούρι και ελιά (προσωρινή εικόνα demo)' : 'Creamy dip with cucumber and an olive (temporary demo image)', 'g-wide'],
-  ].map(([id, alt, cls]) => `<figure class="g-item g-ext ${cls} reveal"><img data-ext="https://images.unsplash.com/${id}?auto=format&fit=crop&w=1000&h=800&q=75" alt="${esc(alt)}" loading="lazy" width="1000" height="800"><span class="demo-tag">${lang === 'el' ? 'Προσωρινή εικόνα demo' : 'Temporary demo image'}</span></figure>`).join('');
+  tile(c, lang, photo(c, lang, 'hall'), 'g-big'),
+  foodTile(c, lang, 'salad-feta.webp', 'Σαλάτα με φέτα', 'Salad with feta'),
+  foodTile(c, lang, 'pan-snails.webp', 'Πιάτο που σερβίρεται σε τηγάνι', 'A dish served in a pan'),
+  foodTile(c, lang, 'plates-salad.webp', 'Πιάτα μεζέδων στο τραπέζι', 'Meze plates on the table', 'g-wide'),
+  tile(c, lang, photo(c, lang, 'lamps'), 'g-tall'),
+  tile(c, lang, photo(c, lang, 'bar-barrels'), 'g-wide'),
+  tile(c, lang, photo(c, lang, 'stage-neon')),
+  tile(c, lang, photo(c, lang, 'window-booth')),
+  tile(c, lang, photo(c, lang, 'sign-night')),
+  tile(c, lang, photo(c, lang, 'hall-night')),
+].join('');
+
+function galleryPage(c, lang) {
+  const photos = PHOTOS.map((p) => tile(c, lang, p)).join('');
+  const clips = CLIPS.map((v) => `<figure class="clip reveal"><video muted loop playsinline preload="metadata" data-clip width="${v.w}" height="${v.h}" aria-label="${esc(L({ el: v.el, en: v.en }, lang))}"><source src="${c.base}/media/${v.f}.mp4#t=0.1" type="video/mp4"></video><figcaption>${esc(L({ el: v.el, en: v.en }, lang))}</figcaption></figure>`).join('');
+  const body = `${pageHead(lang, 'gallery', t(lang, 'gallery.lead'))}
+<div class="wrap">
+  <section aria-labelledby="clips-h" class="section-sm"><h2 id="clips-h" class="h-small-title">${esc(t(lang, 'gallery.clips'))}</h2><div class="clips">${clips}</div></section>
+  <section aria-label="${esc(t(lang, 'gallery.all'))}" class="section-sm"><div class="masonry">${photos}</div></section>
+</div>`;
+  return { title: t(lang, 'gallery.title'), desc: t(lang, 'gallery.desc'), body, scripts: ['gallery.js'], ogImage: '/images/og-interior.jpg' };
+}
 
 function homePage(c, lang) {
   const { upcoming } = splitEvents(EVENTS, c.now);
@@ -210,7 +226,8 @@ function homePage(c, lang) {
   const sigHtml = sig.map((i) => `<li class="reveal"><span>${esc(L(i.name, lang))}</span><span class="dots" aria-hidden="true"></span><span class="price">${i.optionGroups ? esc(t(lang, 'menu.from')) + ' ' : ''}${esc(eur(i.price, lang))}</span></li>`).join('');
   const body = `
 <section class="hero2" data-hero>
-  <img class="hero-bg" src="${c.base}/images/interior.webp" alt="" width="1600" height="1067" fetchpriority="high" data-parallax>
+  <video class="hero-bg" muted loop playsinline preload="metadata" poster="${c.base}/media/hero-poster.jpg" aria-hidden="true" tabindex="-1" data-hero-video><source src="${c.base}/media/hero.mp4" type="video/mp4"></video>
+  <button class="hero-pause" type="button" data-hero-toggle hidden aria-pressed="false">${esc(t(lang, 'gallery.pause'))}</button>
   <div class="hero-veil"></div>
   <div class="wrap hero-grid">
     <div class="hero-copy">
@@ -224,7 +241,6 @@ function homePage(c, lang) {
       </div>
       <p class="hero-note hero-in" style="--d:.55s">${esc(t(lang, 'cta.bookNote'))}</p>
     </div>
-    <figure class="hero-photo hero-in" style="--d:.35s"><img src="${c.base}/images/live-music-sign.webp" alt="${lang === 'el' ? 'Φωτεινή επιγραφή «Το Τσιμπολόι Live music» πάνω από τη σκηνή' : 'Neon sign reading "To Tsimboloi Live music" above the stage'}" width="814" height="814"></figure>
   </div>
 </section>
 
@@ -274,7 +290,7 @@ ${next ? `<section class="section next-night"><div class="wrap">${eventFeature(c
     telephone: VENUE.phoneTel, url: abs(c, lang, ''), image: c.site + '/images/og-interior.jpg',
     // Deliberately omitted until the owner verifies them: openingHours, priceRange, servesCuisine, sameAs, aggregateRating, geo, postalCode.
   }];
-  return { title: t(lang, 'home.title'), desc: t(lang, 'home.desc'), body, jsonld, scripts: ['home.js'], bodyClass: 'page-home' };
+  return { title: t(lang, 'home.title'), desc: t(lang, 'home.desc'), body, jsonld, scripts: ['home.js', 'gallery.js'], bodyClass: 'page-home' };
 }
 
 function menuPage(c, lang) {
@@ -386,7 +402,7 @@ function adminPage(c, lang) {
   return { title: t(lang, 'admin.title'), desc: t(lang, 'admin.title'), body, scripts: ['admin.js'], noindex: true, bodyClass: 'page-admin' };
 }
 
-const PAGES = { '': homePage, menu: menuPage, order: orderPage, events: eventsPage, offers: offersPage, contact: contactPage, privacy: privacyPage, admin: adminPage };
+const PAGES = { '': homePage, menu: menuPage, order: orderPage, events: eventsPage, gallery: galleryPage, offers: offersPage, contact: contactPage, privacy: privacyPage, admin: adminPage };
 
 export function renderPage(c, lang, route) {
   const p = PAGES[route](c, lang);

@@ -15,6 +15,11 @@ try {
   let p = await fresh({ width: 1440, height: 900 });
   await p.goto(U('/')); await dismiss(p); await p.shot(out + '01-desktop-homepage.png'); await p.shot(out + '01-desktop-homepage-full.png', { full: true });
 
+  await p.goto(U('/gallery/')); await dismiss(p); await p.shot(out + '01b-desktop-gallery-full.png', { full: true });
+
+  p = await fresh({ width: 390, height: 844, mobile: true, scale: 2 });
+  await p.goto(U('/')); await dismiss(p); await new Promise((r) => setTimeout(r, 800)); await p.shot(out + '01c-mobile-home.png');
+
   p = await fresh({ width: 390, height: 844, mobile: true, scale: 2 });
   await p.goto(U('/menu/?table=12')); await dismiss(p); await p.shot(out + '02-mobile-menu.png');
   await p.click('[data-open-qr]'); await p.waitFor(`document.querySelector('#qr-dialog').open`); await p.shot(out + '02b-mobile-menu-qr.png');

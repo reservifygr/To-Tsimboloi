@@ -1,7 +1,8 @@
 // Copy added for the v2 redesign (events, Instagram, delivery, admin tools). Merged over strings.js.
 export const EXTRA = {
   el: {
-    nav: { events: 'Live & Εκδηλώσεις' },
+    nav: { events: 'Live & Εκδηλώσεις', gallery: 'Φωτογραφίες' },
+    gallery: { title: 'Φωτογραφίες | Το Τσιμπολόι, Αγία Παρασκευή', desc: 'Φωτογραφίες και βίντεο από το Τσιμπολόι: η αίθουσα, το μπαρ, η σκηνή και η κουζίνα.', h1: 'Ο χώρος μας', lead: 'Η αίθουσα, το μπαρ, η σκηνή και η κουζίνα, όπως είναι κάθε βράδυ.', clips: 'Σε κίνηση', all: 'Όλες οι φωτογραφίες', close: 'Κλείσιμο', prev: 'Προηγούμενη', next: 'Επόμενη', open: 'Μεγέθυνση', pause: 'Παύση βίντεο', play: 'Αναπαραγωγή βίντεο', of: 'από' },
     cta: { book: 'Κράτηση τραπεζιού', menu: 'Δείτε το μενού', order: 'Παραγγελία', events: 'Live & Εκδηλώσεις', call: 'Κλήση', bookNote: 'Οι κρατήσεις γίνονται τηλεφωνικά.' },
     home: {
       title: 'Το Τσιμπολόι | Μουσικό μεζεδοπωλείο στην Αγία Παρασκευή',
@@ -85,7 +86,8 @@ export const EXTRA = {
     },
   },
   en: {
-    nav: { events: 'Live & Events' },
+    nav: { events: 'Live & Events', gallery: 'Photos' },
+    gallery: { title: 'Photos | To Tsimboloi, Agia Paraskevi', desc: 'Photos and short videos of To Tsimboloi: the dining room, the bar, the stage and the kitchen.', h1: 'The place', lead: 'The dining room, the bar, the stage and the kitchen, as they are every evening.', clips: 'In motion', all: 'All photos', close: 'Close', prev: 'Previous', next: 'Next', open: 'Enlarge', pause: 'Pause video', play: 'Play video', of: 'of' },
     cta: { book: 'Book a Table', menu: 'See the Menu', order: 'Order', events: 'Live & Events', call: 'Call', bookNote: 'Reservations are made by phone.' },
     home: {
       title: 'To Tsimboloi | Live-music meze tavern in Agia Paraskevi, Athens',
