@@ -1,4 +1,4 @@
-// MENU DATA - DEMO FIXTURE. Drinks verified against owner-approved "ΤΣΟΥΓΚΡΙΣΜΑΤΑ" PDF (7 Nov 2026); food remains unverified.
+// MENU DATA - DEMO FIXTURE. Food and drinks match the owner's two PDFs (food menu A4 "Prices Updated" and "ΤΣΟΥΓΚΡΙΣΜΑΤΑ" drinks), checked 8 Nov 2026.
 // Source: the two photos of the owner's printed menu (food sheet + "Τσουγκρίσματα" drinks sheet), transcribed 2026-11-03.
 // Greek names, descriptions and prices are as printed. English text is our translation. Every item keeps verified:false
 // until the owner signs off prices. No allergens or dietary labels are invented.
@@ -21,8 +21,7 @@ export const CATEGORIES = [
   { id: 'salads', order: 2, name: { el: 'Δροσερά Τσιμπολογήματα', en: 'Fresh Salads' } },
   { id: 'dips', order: 3, name: { el: 'Βουτιές με ψωμάκι', en: 'Dips with Bread' } },
   { id: 'fire', order: 4, name: { el: 'Στη φωτιά & στο τηγάνι', en: 'From the Fire & the Pan' } },
-  { id: 'grill', order: 5, name: { el: 'Θράκα & Τσουκάλι', en: 'Grill & Clay Pot' } },
-  { id: 'desserts', order: 6, name: { el: 'Γλυκολογήματα', en: 'Desserts' } },
+  { id: 'grill', order: 5, name: { el: 'Από τη σχάρα', en: 'From the Grill' } },
   { id: 'water', order: 7, name: { el: 'Νερό', en: 'Water' } },
   { id: 'softs', order: 8, name: { el: 'Αναψυκτικά', en: 'Soft Drinks' } },
   { id: 'beers', order: 9, name: { el: 'Μπύρες', en: 'Beers' } },
@@ -51,43 +50,50 @@ const twoWay = (id, groupEl, groupEn, aEl, aEn, bEl, bEn, delta) => [
 const sizeGroup = (delta) => twoWay('size', 'Μερίδα', 'Serving size', '2 άτομα', '2 people', '4 άτομα', '4 people', delta);
 
 // English names/descriptions are our translation of the printed Greek text (owner to confirm wording).
-const OWNER_CONFIRMED_DRINK_CATEGORIES = new Set(['water','softs','beers','ouzo','tsipouro','wine-carafe','wine-bottle','spirits-glass','spirits-bottle']);
 const I = (id, cat, el, en, price, extra = {}) => ({
-  id, cat, name: { el, en }, price, available: true, verified: OWNER_CONFIRMED_DRINK_CATEGORIES.has(cat), ...extra,
+  id, cat, name: { el, en }, price, available: true, verified: true, ...extra,
 });
 const G = (el, en) => ({ gloss: { el, en } });
 
 /** @type {MenuItem[]} price = euro cents. Transcribed from the two menu photos supplied on 2026-11-03. */
 export const ITEMS = [
   // To start
-  I('bread', 'start', 'Ψωμί', 'Bread', 120, G('Χειροποίητο χωριάτικο καρβέλι από φυσικό προζύμι, με τραγανή κρούστα και αφράτη ψίχα.', 'Handmade village loaf from natural sourdough, crisp crust and soft crumb.')),
+  I('bread', 'start', 'Ψωμί', 'Bread', 250, G('Χειροποίητο χωριάτικο καρβέλι από φυσικό προζύμι, με τραγανή κρούστα και αφράτη ψίχα.', 'Handmade village loaf from natural sourdough, crisp crust and soft crumb.')),
   // Salads
   I('choriatiki', 'salads', 'Χωριάτικη', 'Village salad (Choriatiki)', 1000, G('Ντομάτα, αγγούρι, κρεμμύδι, πιπεριά, ελιές, κάπαρη & φέτα.', 'Tomato, cucumber, onion, pepper, olives, capers & feta.')),
   I('politiki', 'salads', 'Πολίτικη', 'Politiki salad', 850, G('Λάχανο άσπρο & κόκκινο, καρότο, κόλιανδρο, σέλερι, μηλόξυδο και μέλι.', 'White & red cabbage, carrot, coriander, celery, apple vinegar and honey.')),
-  I('tsimboloi-salad', 'salads', 'Τσιμπολόι', 'Tsimboloi house salad', 1000, G('Λόλα, ρόκα, κοτόπουλο φιλέτο, κρουτόν, ρόδι και σος σαμπάνιας.', 'Lollo lettuce, rocket, chicken fillet, croutons, pomegranate and champagne sauce.')),
+  I('tsimboloi-salad', 'salads', 'Τσιμπολόι', 'Tsimboloi house salad', 1000, G('Λόλα, ρόκα, κοτόπουλο φιλέτο, κρουτόν, ρόδι και σος σαλάτας.', 'Lollo lettuce, rocket, chicken fillet, croutons, pomegranate and salad dressing.')),
+  I('green-salad', 'salads', 'Πράσινη σαλάτα', 'Green salad', 600, G('Μαρούλι, φρέσκο κρεμμύδι και άνηθος.', 'Lettuce, spring onion and dill.')),
+  I('rocket-parmesan', 'salads', 'Ρόκα Παρμεζάνα', 'Rocket & Parmesan salad', 900, G('Ρόκα, νιφάδες παρμεζάνας, βαλσάμικο ρόδι και ντοματίνια.', 'Rocket, Parmesan shavings, pomegranate balsamic and cherry tomatoes.')),
   // Dips
   I('tirokafteri', 'dips', 'Τυροκαυτερή (Γνήσια)', 'Tirokafteri (spicy cheese dip)', 700, G('Φέτα Π.Ο.Π., καυτερή πιπεριά & ελαιόλαδο.', 'PDO feta, hot pepper & olive oil.')),
   I('tzatziki', 'dips', 'Τζατζίκι', 'Tzatziki', 500, G('Στραγγιστό γιαούρτι, αγγούρι, σκόρδο και καρότο.', 'Strained yoghurt, cucumber, garlic and carrot.')),
   I('fava', 'dips', 'Φάβα Παντρεμένη', 'Fava "Pantremeni"', 600, G('Φάβα Σαντορίνης, ντοματίνια και κρεμμύδι ξερό.', 'Santorini fava, cherry tomatoes and dry onion.')),
+  I('aubergine-salad', 'dips', 'Μελιτζανοσαλάτα ψητή σχάρας', 'Chargrilled aubergine salad', 800, G('Μελιτζάνα ψητή, ντομάτα, φέτα Π.Ο.Π., ελιές, μαϊντανός και σκόρδο.', 'Grilled aubergine, tomato, PDO feta, olives, parsley and garlic.')),
   // Fire & pan
   I('saganaki', 'fire', 'Σαγανάκι', 'Saganaki', 850, G('Κεφαλοτύρι με τραγανή κρούστα & λεμόνι.', 'Kefalotyri cheese with a crisp crust & lemon.')),
-  I('fries', 'fire', 'Πατάτες τηγανιτές', 'Fries', 450, G('Φρεσκοκομμένες πατάτες.', 'Freshly cut potatoes.')),
+  I('grilled-feta', 'fire', 'Φέτα ψητή', 'Grilled feta', 850, G('Με μέλι σε τραγανή κρούστα από σουσάμι.', 'With honey in a crisp sesame crust.')),
+  I('fries', 'fire', 'Πατάτες τηγανητές', 'Fries', 450, G('Φρεσκοκομμένες πατάτες.', 'Freshly cut potatoes.')),
   I('florina-pepper', 'fire', 'Πιπεριά Φλωρίνης', 'Florina pepper', 850, G('Γεμιστή με φέτα, ξινομυζήθρα και ελιές.', 'Stuffed with feta, xinomyzithra cheese and olives.')),
   I('stuffed-sausage', 'fire', 'Λουκάνικο γεμιστό', 'Stuffed sausage', 950, G('Γεμιστό με τυρί ροκφόρ και μπέικον.', 'Stuffed with roquefort cheese and bacon.')),
-  I('cheese-croquettes', 'fire', 'Τυροκροκέτες', 'Cheese croquettes', 700, G('Με τσάτνεϊ καρότο.', 'With carrot chutney.')),
+  I('cheese-croquettes', 'fire', 'Τυροκροκέτες', 'Cheese croquettes', 700, G('Με τσαντένι καρότο.', 'With carrot chutney.')),
   I('grilled-vegetables', 'fire', 'Ποικιλία ψητών λαχανικών', 'Grilled vegetable selection', 800, G('Πολύχρωμες πιπεριές (κόκκινη, κίτρινη, πράσινη), μελιτζάνες, μανιτάρια πλευρώτους.', 'Colourful peppers (red, yellow, green), aubergines, oyster mushrooms.')),
-  // Grill & clay pot
+  I('cheese-platter', 'fire', 'Ποικιλία Τυριών - Αλλαντικών', 'Cheese & cold-cut platter', 1600, { optionGroups: sizeGroup(1100), ...G('Ελληνικά τυριά και εκλεκτά αλλαντικά, συνοδεύονται από κριτσίνια, μαρμελάδα, ντοματίνια και ελιές.', 'Greek cheeses and fine cold cuts, with breadsticks, jam, cherry tomatoes and olives.') }),
+  // Grill
   I('beef-patties', 'grill', 'Μπιφτέκια Μοσχαρίσια', 'Beef patties (Biftekia)', 1450, G('Ζουμερά μοσχαρίσια μπιφτέκια με μυρωδικά, συνοδεύεται από φρέσκες πατάτες.', 'Juicy beef patties with herbs, served with fresh potatoes.')),
   I('pork-fillets', 'grill', 'Χοιρινά Φιλετάκια', 'Pork fillets', 1400, G('Τρυφερά φιλετάκια λαιμού στη σχάρα με μυρωδικά, συνοδεύεται από φρέσκες πατάτες.', 'Tender pork-neck fillets on the grill with herbs, served with fresh potatoes.')),
   I('chicken-fillet', 'grill', 'Φιλέτο Κοτόπουλο', 'Chicken fillet', 1300, G('Φιλέτο κοτόπουλο στη σχάρα μαριναρισμένο με μπαχαρικά, συνοδεύεται από φρέσκες πατάτες.', 'Grilled chicken fillet marinated in spices, served with fresh potatoes.')),
   I('meat-platter', 'grill', 'Ποικιλία Κρεατικών', 'Meat platter', 2700, { optionGroups: sizeGroup(1200), ...G('Χοιρινά φιλετάκια, μπιφτέκι μοσχαρίσιο, κοτόπουλο μπούτι φιλέτο, λουκάνικο χωριάτικο, πατάτες τηγανητές.', 'Pork fillets, beef patty, boneless chicken thigh, village sausage, fries.') }),
-  I('cheese-platter', 'grill', 'Ποικιλία Τυριών - Αλλαντικών', 'Cheese & cold-cut platter', 1600, { optionGroups: sizeGroup(1100), ...G('Ελληνικά τυριά και εκλεκτά αλλαντικά, συνοδεύεται από κριτσίνια, μαρμελάδα, ντοματίνια και ελιές.', 'Greek cheeses and fine cold cuts, with breadsticks, jam, cherry tomatoes and olives.') }),
-  // Desserts
-  I('orange-pie', 'desserts', 'Πορτοκαλόπιτα', 'Orange pie', 600, G('Χειροποίητη, μοσχομυριστή, φτιαγμένη με φρέσκα πορτοκάλια.', 'Handmade, fragrant, made with fresh oranges.')),
-  I('dessert-of-day', 'desserts', 'Γλυκό ημέρας', 'Dessert of the day', 500, { ...G('Γλυκές εκπλήξεις ανάλογα με την εποχή και την έμπνευση της κουζίνας μας.', 'Sweet surprises depending on the season and the kitchen\'s inspiration.'), note: 'Varies daily; owner sets availability' }),
+  I('sausage-portion', 'grill', 'Λουκάνικο Μερίδα', 'Sausage portion', 1000, G('Μερίδα λουκάνικο χωριάτικο, πρασάτο Καρδίτσας με πατάτες.', 'Village sausage and Karditsa leek sausage with potatoes.')),
+  I('pork-tomahawk', 'grill', 'Χοιρινό Τόμαχοκ', 'Pork tomahawk', 1600, G('Χοιρινό τόμαχοκ στη σχάρα, συνοδεύεται από πατάτες.', 'Grilled pork tomahawk, served with potatoes.')),
+  I('beef-tbone', 'grill', 'Μοσχαρίσιο T-Bone', 'Beef T-bone', 1800, G('Μοσχαρίσιο τι-μπον στη σχάρα, συνοδεύεται από πουρέ πατάτας.', 'Grilled beef T-bone, served with mashed potato.')),
+  I('lamb-chops', 'grill', 'Παϊδάκια Αρνίσια', 'Lamb chops', 1600, G('Παϊδάκια αρνίσια με πουρέ πατάτας.', 'Lamb chops with mashed potato.')),
+  I('beef-fillet', 'grill', 'Φιλέτο Μοσχάρι', 'Beef fillet', 1800, G('Φιλέτο μοσχάρι στη σχάρα με δεντρολίβανο και θυμάρι, συνοδεύεται από πουρέ πατάτας.', 'Grilled beef fillet with rosemary and thyme, served with mashed potato.')),
+  I('calf-liver', 'grill', 'Μοσχαρίσιο Συκώτι Γάλακτος', 'Milk-fed calf liver', 1600, G('Μοσχαρίσιο συκώτι γάλακτος στη σχάρα, συνοδεύεται από πατάτες.', 'Grilled milk-fed calf liver, served with potatoes.')),
+  I('beef-tagliata', 'grill', 'Ταλιάτα Μοσχάρι', 'Beef tagliata', 2000, G('Με πάκερι, τρούφα και κρέμα γάλακτος.', 'With pacherry, truffle and cream.')),
   // Water
   I('water-1l', 'water', 'Νερό Εμφιαλωμένο 1L', 'Bottled water 1 L', 200),
-  I('water-florina', 'water', 'Ξινό Νερό Φλώρινης 250ml', 'Florina sparkling water 250 ml', 300),
+  I('water-florina', 'water', 'Ξυνό Νερό Φλώρινης 250ml', 'Florina sparkling water 250 ml', 300),
   // Soft drinks
   I('cola-250', 'softs', 'Coca Cola Regular / Zero 250ml', 'Coca-Cola Regular / Zero 250 ml', 250),
   I('fanta-250', 'softs', 'Fanta Πορτοκαλάδα 400ml', 'Fanta Orange 400 ml', 250),

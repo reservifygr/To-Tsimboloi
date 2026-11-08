@@ -75,8 +75,8 @@ test('menu: category order, QR dialog, table param, print layout hooks, override
   const p = await page({ width: 390, height: 844, mobile: true });
   await p.goto(U('/menu/?table=12'));
   const cats = await p.eval(`[...document.querySelectorAll('.menu-cat h2')].map(h=>h.textContent)`);
-  assert.deepEqual(cats, ['Για το ξεκίνημα', 'Δροσερά Τσιμπολογήματα', 'Βουτιές με ψωμάκι', 'Στη φωτιά & στο τηγάνι', 'Θράκα & Τσουκάλι', 'Γλυκολογήματα', 'Νερό', 'Αναψυκτικά', 'Μπύρες', 'Ούζο', 'Τσίπουρο', 'Κρασιά (Βαρελίσια 500ml)', 'Κρασιά (Φιάλες)', 'Αλκοόλ (Ποτήρι)', 'Αλκοόλ (Φιάλη)']);
-  assert.equal(await p.count('.dish'), 57);
+  assert.deepEqual(cats, ['Για το ξεκίνημα', 'Δροσερά Τσιμπολογήματα', 'Βουτιές με ψωμάκι', 'Στη φωτιά & στο τηγάνι', 'Από τη σχάρα', 'Νερό', 'Αναψυκτικά', 'Μπύρες', 'Ούζο', 'Τσίπουρο', 'Κρασιά (Βαρελίσια 500ml)', 'Κρασιά (Φιάλες)', 'Αλκοόλ (Ποτήρι)', 'Αλκοόλ (Φιάλη)']);
+  assert.equal(await p.count('.dish'), 66);
   assert.match(await p.text('[data-table-chip]'), /Τραπέζι 12/);
   await p.click('[data-open-qr]');
   await p.waitFor(`document.querySelector('#qr-dialog').open`);

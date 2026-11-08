@@ -21,7 +21,7 @@ test('menu: every item has bilingual names, integer cents, and is has a boolean 
 
 test('menu: prices from the brief', () => {
   const p = (id) => findItem(menu, id).price;
-  assert.equal(p('bread'), 120);
+  assert.equal(p('bread'), 250);
   assert.equal(p('choriatiki'), 1000);
   assert.equal(p('saganaki'), 850);
   assert.equal(p('beef-patties'), 1450);
@@ -37,7 +37,7 @@ test('cart: add, merge identical lines, quantity math', () => {
   assert.equal(c.lines[0].qty, 3);
   c = addLine(c, menu, { itemId: 'bread', qty: 2 });
   const t = totals(menu, c);
-  assert.equal(t.subtotal, 3 * 500 + 2 * 120);
+  assert.equal(t.subtotal, 3 * 500 + 2 * 250);
   assert.equal(t.itemCount, 5);
 });
 

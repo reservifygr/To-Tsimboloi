@@ -20,7 +20,7 @@ const expected = {
 };
 
 test('owner-confirmed drinks list matches approved PDF prices', () => {
-  const drinkItems = ITEMS.filter(i => !['start','salads','dips','fire','grill','desserts'].includes(i.cat));
+  const drinkItems = ITEMS.filter(i => !['start','salads','dips','fire','grill'].includes(i.cat));
   assert.equal(drinkItems.length, Object.keys(expected).length);
   for (const item of drinkItems) {
     assert.equal(item.price, expected[item.id], item.id + ' price');
@@ -39,8 +39,16 @@ test('printed beer serving sizes cannot be silently switched at checkout', () =>
   assert.ok(!large.optionGroups?.length);
 });
 
-test('food prices stay pending source verification', () => {
-  const foodItems = ITEMS.filter(i => ['start','salads','dips','fire','grill','desserts'].includes(i.cat));
-  assert.ok(foodItems.length>0);
-  assert.ok(foodItems.every(i=>i.verified===false));
+const food = { bread:250, choriatiki:1000, politiki:850, 'tsimboloi-salad':1000, 'green-salad':600, 'rocket-parmesan':900,
+  tirokafteri:700, tzatziki:500, fava:600, 'aubergine-salad':800, saganaki:850, 'grilled-feta':850, fries:450, 'florina-pepper':850,
+  'stuffed-sausage':950, 'cheese-croquettes':700, 'grilled-vegetables':800, 'cheese-platter':1600, 'beef-patties':1450, 'pork-fillets':1400,
+  'chicken-fillet':1300, 'meat-platter':2700, 'sausage-portion':1000, 'pork-tomahawk':1600, 'beef-tbone':1800, 'lamb-chops':1600,
+  'beef-fillet':1800, 'calf-liver':1600, 'beef-tagliata':2000 };
+
+test('food items match the owner food-menu PDF (prices, nothing missing or extra)', () => {
+  const foodItems = ITEMS.filter(i => ['start','salads','dips','fire','grill'].includes(i.cat));
+  assert.equal(foodItems.length, Object.keys(food).length);
+  for (const i of foodItems) assert.equal(i.price, food[i.id], i.id);
+  const mp = ITEMS.find(i => i.id === 'meat-platter');
+  assert.equal(mp.price + mp.optionGroups[0].options[1].priceDelta, 3900);
 });

@@ -215,7 +215,7 @@ function galleryPage(c, lang) {
 function homePage(c, lang) {
   const { upcoming } = splitEvents(EVENTS, c.now);
   const next = upcoming[0];
-  const sig = ['saganaki', 'tirokafteri', 'fava', 'stuffed-sausage', 'meat-platter', 'orange-pie'].map((id) => MENU.items.find((i) => i.id === id));
+  const sig = ['saganaki', 'tirokafteri', 'fava', 'stuffed-sausage', 'meat-platter', 'pork-tomahawk'].map((id) => MENU.items.find((i) => i.id === id));
   const sigHtml = sig.map((i) => `<li class="reveal"><span>${esc(L(i.name, lang))}</span><span class="dots" aria-hidden="true"></span><span class="price">${i.optionGroups ? esc(t(lang, 'menu.from')) + ' ' : ''}${esc(eur(i.price, lang))}</span></li>`).join('');
   const body = `
 <section class="hero2" data-hero>

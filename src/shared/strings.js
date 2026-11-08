@@ -263,7 +263,7 @@ export const S = {
     },
     menu: {
       title: 'Menu | To Tsimboloi, Agia Paraskevi',
-      desc: 'The To Tsimboloi menu: salads, meze, grilled dishes, sharing platters, desserts and soft drinks. Prices in euro.',
+      desc: 'The To Tsimboloi menu: salads, meze, grilled dishes, sharing platters, soft drinks, beer and wine. Prices in euro.',
       h1: 'Menu',
       lead: 'Meze, grilled dishes and platters to share.',
       pricesNote: 'Prices include VAT and all taxes. Please tell staff about any allergies before ordering.',
