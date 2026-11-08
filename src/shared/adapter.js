@@ -3,11 +3,12 @@
 //   ProductionAdapter - deliberately inert placeholder: throws until a real, reviewed backend is wired in.
 // The UI only talks to the `OrderAdapter` shape below, so swapping transports does not touch UI code.
 import { applyOverrides, MENU } from './menu-data.js';
+import { createReservation, transitionReservation, mergeSettings as mergeResSettings, RES_ACTIVE } from './reservations.js';
 import { createOrder, transition, OrderError, ACTIVE_STATUSES } from './orders.js';
 
 export const MODE = 'demo'; // 'demo' | 'production' - production is intentionally not implemented in this repo
 
-const K = { orders: 'tsb.demo.orders.v1', settings: 'tsb.demo.settings.v1', seq: 'tsb.demo.seq.v1', log: 'tsb.demo.eventlog.v1', images: 'tsb.demo.images.v1', customers: 'tsb.demo.customers.v1' };
+const K = { orders: 'tsb.demo.orders.v1', settings: 'tsb.demo.settings.v1', seq: 'tsb.demo.seq.v1', log: 'tsb.demo.eventlog.v1', images: 'tsb.demo.images.v1', customers: 'tsb.demo.customers.v1', res: 'tsb.demo.reservations.v1', resSettings: 'tsb.demo.reservation-settings.v1', resSeq: 'tsb.demo.reservation-seq.v1' };
 export const DEFAULT_SETTINGS = { paused: false, prepMinutes: 25, takeaway: true, delivery: true, overrides: {} };
 
 /** Storage with an in-memory fallback (private mode / blocked storage / Node tests). */
@@ -92,8 +93,42 @@ export class DemoAdapter {
   }
   deleteCustomer(phone) { this.s.set(K.customers, this.listCustomers().filter((x) => x.phone !== phone)); this.#log('customer_deleted', { phone }); }
 
+  // ---- Table reservations (see reservations.js; every number is a setting the owner can change) ----
+  getReservationSettings() { return mergeResSettings(this.s.get(K.resSettings, {})); }
+  saveReservationSettings(patch) { const next = mergeResSettings({ ...this.s.get(K.resSettings, {}), ...patch }); this.s.set(K.resSettings, next); this.#log('reservation_settings_changed', Object.keys(patch)); return next; }
+  listReservations() { return this.s.get(K.res, []); }
+  getReservation(id) { return this.listReservations().find((r) => r.id === id); }
+  /** Idempotent on idempotencyKey. @returns {{reservation:any, duplicate:boolean}} */
+  submitReservation(input) {
+    const list = this.listReservations();
+    const dup = input.idempotencyKey && list.find((r) => r.idempotencyKey === input.idempotencyKey);
+    if (dup) return { reservation: dup, duplicate: true };
+    const seq = this.s.get(K.resSeq, 0) + 1;
+    const reservation = createReservation(input, { settings: this.getReservationSettings(), reservations: list, now: this.clock(), seq });
+    this.s.set(K.resSeq, seq);
+    this.s.set(K.res, [reservation, ...list]);
+    this.#log('reservation_created', { id: reservation.id, status: reservation.status });
+    return { reservation, duplicate: false };
+  }
+  changeReservation(id, to, { actor, expectedVersion, reason } = {}) {
+    const list = this.listReservations();
+    const i = list.findIndex((r) => r.id === id);
+    if (i < 0) throw new OrderError('NOT_FOUND', `Reservation ${id} not found`);
+    const updated = transitionReservation(list[i], to, { actor, expectedVersion, reason, now: this.clock() });
+    const next = list.slice(); next[i] = updated; this.s.set(K.res, next);
+    this.#log('reservation_status', { id, to, actor });
+    return updated;
+  }
+  /** A guest looks up their booking by reference + the phone number used (digits compared). */
+  findReservation(ref, phone) {
+    const digits = (x) => String(x ?? '').replace(/\D/g, '').slice(-10);
+    const r = this.getReservation(String(ref ?? '').trim().toUpperCase());
+    return r && digits(r.phone) === digits(phone) && digits(phone).length >= 10 ? r : null;
+  }
+  activeReservations() { return this.listReservations().filter((r) => RES_ACTIVE.includes(r.status)); }
+
   activeOrders() { return this.listOrders().filter((o) => ACTIVE_STATUSES.includes(o.status)); }
-  resetDemo() { [K.orders, K.settings, K.seq, K.log, K.images, K.customers].forEach((k) => this.s.remove(k)); }
+  resetDemo() { [K.orders, K.settings, K.seq, K.log, K.images, K.customers, K.res, K.resSettings, K.resSeq].forEach((k) => this.s.remove(k)); }
   eventLog() { return this.s.get(K.log, []); }
   #log(type, data) {
     const log = this.s.get(K.log, []);

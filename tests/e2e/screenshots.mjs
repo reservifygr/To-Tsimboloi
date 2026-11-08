@@ -17,6 +17,10 @@ try {
 
   await p.goto(U('/gallery/')); await dismiss(p); await p.shot(out + '01b-desktop-gallery-full.png', { full: true });
 
+  await p.goto(U('/reserve/')); await dismiss(p);
+  await p.eval(`(()=>{let d=new Date(Date.now()+4*86400000);while(d.getUTCDay()!==6)d=new Date(d.getTime()+86400000);const i=document.querySelector('#r-date');i.value=d.toISOString().slice(0,10);i.dispatchEvent(new Event('change',{bubbles:true}));document.querySelector('input[name=r-time][value="20:00"]')?.click();return true})()`);
+  await p.shot(out + '01d-desktop-reserve-full.png', { full: true });
+
   p = await fresh({ width: 390, height: 844, mobile: true, scale: 2 });
   await p.goto(U('/')); await dismiss(p); await new Promise((r) => setTimeout(r, 800)); await p.shot(out + '01c-mobile-home.png');
 

@@ -7,7 +7,7 @@ import { LATEST_POSTS, PAST_POSTS, EVENTS, splitEvents } from '../shared/social-
 import { eur } from '../shared/money.js';
 import { PHOTOS, CLIPS } from '../shared/gallery-data.js';
 
-export const ROUTES = ['', 'menu', 'order', 'events', 'gallery', 'offers', 'contact', 'privacy', 'admin'];
+export const ROUTES = ['', 'menu', 'order', 'events', 'gallery', 'offers', 'contact', 'reserve', 'privacy', 'admin'];
 export const NAV = ['', 'menu', 'order', 'events', 'gallery', 'offers', 'contact'];
 const NAV_KEY = { '': 'home', menu: 'menu', order: 'order', events: 'events', gallery: 'gallery', offers: 'offers', contact: 'contact' };
 
@@ -45,7 +45,7 @@ function header(c, lang, route) {
   <div class="wrap bar">
     <a class="brand" href="${pathFor(c, lang, '')}"><span class="wordmark">${esc(S[lang].brand)}</span></a>
     <nav id="site-nav" class="site-nav" aria-label="${esc(t(lang, 'nav.main'))}"><ul>${links}</ul></nav>
-    <a class="btn btn-primary btn-sm head-call" href="tel:${VENUE.phoneTel}">${esc(t(lang, 'cta.book'))}</a>
+    <a class="btn btn-primary btn-sm head-call" href="${pathFor(c, lang, 'reserve')}">${esc(t(lang, 'cta.book'))}</a>
     <a class="lang-switch" href="${pathFor(c, other, route)}" hreflang="${other}" lang="${other}" data-lang-switch="${other}" aria-label="${esc(t(lang, 'nav.langSwitchLabel'))}">${esc(t(lang, 'nav.langSwitch'))}</a>
     <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" data-nav-toggle><span class="sr-only">${esc(t(lang, 'nav.menuBtn'))}</span><span class="burger" aria-hidden="true"></span></button>
   </div>
@@ -58,7 +58,7 @@ function footer(c, lang) {
     <div><p class="wordmark foot-mark">${esc(S[lang].brand)}</p>
       <p>${esc(lang === 'el' ? VENUE.street + ', ' + VENUE.city : VENUE.streetEn + ', ' + VENUE.cityEn)}</p>
       <p><a href="tel:${VENUE.phoneTel}">${esc(VENUE.phoneDisplay)}</a></p><p class="muted">${esc(t(lang, 'footer.hours'))}</p></div>
-    <div><ul class="foot-links">${NAV.slice(1).map((r) => `<li><a href="${pathFor(c, lang, r)}">${esc(t(lang, 'nav.' + NAV_KEY[r]))}</a></li>`).join('')}<li><a href="${pathFor(c, lang, 'privacy')}">${esc(t(lang, 'footer.privacy'))}</a></li><li><a href="${VENUE.instagram.url}" target="_blank" rel="noopener me">${esc(t(lang, 'footer.instagram'))}</a></li></ul></div>
+    <div><ul class="foot-links">${NAV.slice(1).map((r) => `<li><a href="${pathFor(c, lang, r)}">${esc(t(lang, 'nav.' + NAV_KEY[r]))}</a></li>`).join('')}<li><a href="${pathFor(c, lang, 'reserve')}">${esc(t(lang, 'cta.book'))}</a></li><li><a href="${pathFor(c, lang, 'privacy')}">${esc(t(lang, 'footer.privacy'))}</a></li><li><a href="${VENUE.instagram.url}" target="_blank" rel="noopener me">${esc(t(lang, 'footer.instagram'))}</a></li></ul></div>
     <div class="muted small"><p>${esc(t(lang, 'footer.rights'))}</p><p>${esc(t(lang, 'footer.by'))}. <a href="${pathFor(c, lang, 'admin')}" rel="nofollow">${lang === 'el' ? 'Διαχείριση (demo)' : 'Staff admin (demo)'}</a></p></div>
   </div>
 </footer>`;
@@ -105,6 +105,7 @@ ${robots}
 <link rel="preload" href="${A('/fonts/manrope.woff')}" as="font" type="font/woff" crossorigin>
 <link rel="preload" href="${A('/fonts/serif-display.woff')}" as="font" type="font/woff" crossorigin>
 <link rel="stylesheet" href="${A('/assets/site.css')}?v=${c.version}">
+<script>try{if(sessionStorage.getItem('tsb-intro')){document.documentElement.classList.add('no-intro')}else{sessionStorage.setItem('tsb-intro','1')}}catch(e){}</script>
 ${jsonld.map((j) => `<script type="application/ld+json">${JSON.stringify(j)}</script>`).join('\n')}
 </head>
 <body class="${bodyClass}" data-lang="${lang}" data-route="${route || 'home'}" data-base="${esc(c.base)}">
@@ -237,17 +238,22 @@ function homePage(c, lang) {
       <div class="cta-row hero-in" style="--d:.45s">
         <a class="btn btn-primary" href="${pathFor(c, lang, 'order')}">${esc(t(lang, 'cta.order'))}</a>
         <a class="btn btn-ghost" href="${pathFor(c, lang, 'menu')}">${esc(t(lang, 'cta.menu'))}</a>
-        <a class="btn btn-ghost" href="tel:${VENUE.phoneTel}">${esc(t(lang, 'cta.book'))} <span class="btn-sub">${esc(VENUE.phoneDisplay)}</span></a>
+        <a class="btn btn-ghost" href="${pathFor(c, lang, 'reserve')}">${esc(t(lang, 'cta.book'))}</a>
       </div>
-      <p class="hero-note hero-in" style="--d:.55s">${esc(t(lang, 'cta.bookNote'))}</p>
     </div>
   </div>
+  <dl class="hero-facts wrap hero-in" style="--d:.7s">
+    <div><dt>${lang === 'el' ? 'Πού' : 'Where'}</dt><dd>${lang === 'el' ? 'Αγίου Ιωάννου 71, Αγία Παρασκευή' : 'Agiou Ioannou 71, Agia Paraskevi'}</dd></div>
+    <div><dt>${lang === 'el' ? 'Τηλέφωνο' : 'Phone'}</dt><dd><a href="tel:${VENUE.phoneTel}">${esc(VENUE.phoneDisplay)}</a></dd></div>
+    <div><dt>${lang === 'el' ? 'Παραγγελία' : 'Order'}</dt><dd>${lang === 'el' ? 'Παραλαβή και delivery, χωρίς προμήθεια' : 'Pickup and delivery, no commission'}</dd></div>
+    <div><dt>${lang === 'el' ? 'Βράδυ' : 'Evenings'}</dt><dd>${lang === 'el' ? 'Ζωντανή μουσική' : 'Live music'}</dd></div>
+  </dl>
 </section>
 
 ${next ? `<section class="section next-night"><div class="wrap">${eventFeature(c, lang, next, { compact: true })}</div></section>` : ''}
 
 <section class="section story"><div class="wrap split">
-  <div class="story-imgs"><img class="si-a reveal" src="${c.base}/images/pan-snails.webp" alt="${lang === 'el' ? 'Πιάτο που σερβίρεται σε τηγάνι' : 'A dish served in a pan'}" width="900" height="900" loading="lazy"><img class="si-b reveal" src="${c.base}/images/salad-feta.webp" alt="${lang === 'el' ? 'Σαλάτα με φέτα' : 'Salad with feta'}" width="900" height="900" loading="lazy"></div>
+  <div class="story-imgs"><img class="si-a reveal" src="${c.base}/media/hall-bar.webp" alt="${lang === 'el' ? 'Η αίθουσα με το μπαρ στο βάθος' : 'The dining room with the bar at the back'}" width="1800" height="1350" loading="lazy"><img class="si-b reveal" src="${c.base}/media/lyra-wall-sm.webp" alt="${lang === 'el' ? 'Παραδοσιακό όργανο στον τοίχο' : 'A traditional instrument on the wall'}" width="1350" height="1800" loading="lazy"></div>
   <div><p class="kicker">${esc(t(lang, 'home.storyKicker'))}</p><h2 class="reveal">${esc(t(lang, 'home.storyTitle'))}</h2>
   <p class="reveal">${esc(t(lang, 'home.storyP1'))}</p><p class="muted reveal">${esc(t(lang, 'home.storyP2'))}</p>${svgLeaf}</div>
 </div></section>
@@ -330,6 +336,15 @@ function orderPage(c, lang) {
   return { title: t(lang, 'order.title'), desc: t(lang, 'order.desc'), body, scripts: ['order.js'], bodyClass: 'page-order' };
 }
 
+function reservePage(c, lang) {
+  const body = `${pageHead(lang, 'reserve', t(lang, 'reserve.lead'))}
+<div class="wrap reserve-wrap">
+  <p class="notice strong">${esc(t(lang, 'reserve.demo'))}</p>
+  <div id="reserve-root" aria-live="polite" data-phone="${esc(VENUE.phoneDisplay)}"><noscript><p class="notice">${esc(t(lang, 'reserve.noJs').replace('{phone}', VENUE.phoneDisplay))}</p></noscript></div>
+</div>`;
+  return { title: t(lang, 'reserve.title'), desc: t(lang, 'reserve.desc'), body, scripts: ['reserve.js'], bodyClass: 'page-reserve' };
+}
+
 function eventsPage(c, lang) {
   const { upcoming, past } = splitEvents(EVENTS, c.now);
   const feature = upcoming.length ? upcoming.map((e) => eventFeature(c, lang, e)).join('') : '';
@@ -402,7 +417,7 @@ function adminPage(c, lang) {
   return { title: t(lang, 'admin.title'), desc: t(lang, 'admin.title'), body, scripts: ['admin.js'], noindex: true, bodyClass: 'page-admin' };
 }
 
-const PAGES = { '': homePage, menu: menuPage, order: orderPage, events: eventsPage, gallery: galleryPage, offers: offersPage, contact: contactPage, privacy: privacyPage, admin: adminPage };
+const PAGES = { '': homePage, menu: menuPage, order: orderPage, events: eventsPage, gallery: galleryPage, offers: offersPage, contact: contactPage, reserve: reservePage, privacy: privacyPage, admin: adminPage };
 
 export function renderPage(c, lang, route) {
   const p = PAGES[route](c, lang);

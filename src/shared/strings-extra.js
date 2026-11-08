@@ -1,4 +1,5 @@
 // Copy added for the v2 redesign (events, Instagram, delivery, admin tools). Merged over strings.js.
+import { RESERVE } from './strings-reserve.js';
 export const EXTRA = {
   el: {
     nav: { events: 'Live & Εκδηλώσεις', gallery: 'Φωτογραφίες' },
@@ -178,3 +179,5 @@ export function deepMerge(base, extra) {
   }
   return base;
 }
+deepMerge(EXTRA.el, RESERVE.el);
+deepMerge(EXTRA.en, RESERVE.en);

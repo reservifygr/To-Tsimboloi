@@ -154,3 +154,11 @@ Menu photos and the full drinks list, Instagram images/videos with captions and 
 
 ## V4: visual redesign
 Warm taverna palette (cream, olive, terracotta, warm near-black), Noto Serif Display + Manrope (both OFL, self-hosted in `public/fonts`, Latin + Greek subsets), calm buttons, text wordmark, framed hero photo. Glow, floating notes, equaliser, marquee and wave dividers were removed on purpose. Design directions explored in a Design canvas (A taverna, B music night, C Aegean editorial); the site uses A with B's dark live-music panel.
+
+## Table reservations (V5)
+
+`/reserve/` (and `/en/reserve/`) lets guests pick guests, date and time; staff handle requests in Admin > Reservations. Logic lives in `src/shared/reservations.js` (pure, unit-tested); storage goes through the same demo adapter as orders.
+
+**Everything the owner must confirm is a setting**, editable by the owner in Admin > Reservations (or via `RES_DEFAULTS` for the shipped defaults): max capacity (seats at once), largest online party, time step, table hold time, reset buffer, max guests arriving per slot, minimum notice, how far ahead, auto-confirm vs approve each request, whether pending requests hold seats, booking hours per weekday and closed dates. All current numbers are placeholders (`verified: false`).
+
+Questions for the owner: capacity and table layout, how long a table is held, buffer, largest group online, hours and last seating per day, closed days, approve-each or auto-confirm, who answers requests and how guests are notified (email/SMS needs the real backend).

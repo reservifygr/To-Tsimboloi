@@ -7,6 +7,7 @@ import { TRANSITIONS, ROLE_TRANSITIONS, ACTIVE_STATUSES, can, canTransition, Ord
 import { emptyCart, addLine } from './shared/cart.js';
 import { LATEST_POSTS, PAST_POSTS, EVENTS } from './shared/social-data.js';
 import { VENUE } from './shared/content-data.js';
+import { reservationsView, bindReservations, pendingReservations } from './admin-reservations.js';
 import { menuQr, downloadText, downloadPng } from './qrtools.js';
 
 const FIXTURE = { owner: 'owner-demo', staff: 'staff-demo', kitchen: 'kitchen-demo' };
@@ -94,7 +95,7 @@ function syncAlarm(pending, fresh) {
   } else if (fresh.length) chime();
 }
 
-const tabsFor = (role) => ['orders', 'customers', 'menu', 'media', 'qr', 'settings', ...(can(role, 'reports') ? ['reports'] : []), 'audit'];
+const tabsFor = (role) => ['orders', ...(can(role, 'reservations') ? ['reservations'] : []), 'customers', 'menu', 'media', 'qr', 'settings', ...(can(role, 'reports') ? ['reports'] : []), 'audit'];
 
 /** Looks at orders: detects new ones, drives the alarm and the incoming popup. Runs on every render and every poll tick. */
 function watch() {
@@ -110,22 +111,27 @@ function watch() {
   return pending;
 }
 
+function resWaiting(role) {
+  const n = can(role, 'reservations') ? pendingReservations().length : 0;
+  return n && tab !== 'reservations' ? `<div class="alert-bar" role="status" id="res-bar"><span class="grow">${esc(T('admin.res.waiting', { n }))}</span><button class="btn btn-primary btn-sm" type="button" id="open-res">${esc(T('admin.res.openRes'))}</button></div>` : '';
+}
+
 function render() {
   if (!session) return renderLogin();
   const role = session.role;
   const pending = watch();
   const orders = adapter.listOrders();
   if (!tabsFor(role).includes(tab)) tab = 'orders';
-  const views = { orders: ordersView, customers: customersView, menu: menuView, media: mediaView, qr: qrView, settings: settingsView, reports: reportsView, audit: auditView };
+  const views = { orders: ordersView, reservations: (o, r) => reservationsView(r), customers: customersView, menu: menuView, media: mediaView, qr: qrView, settings: settingsView, reports: reportsView, audit: auditView };
   const waiting = pending.length && !document.getElementById('incoming')?.open
     ? `<div class="alert-bar" role="status"><span class="grow">${esc(A('waiting', { n: pending.length }))}</span><button class="btn btn-primary btn-sm" type="button" id="open-in">${esc(A('openIt'))}</button></div>` : '';
   root.innerHTML = `<div class="admin-bar"><span class="grow"><strong>${esc(A('roles.' + role))}</strong> (${esc(session.user)}) <span class="badge">${esc(T('common.demo'))}</span></span>
     <button class="btn btn-sm ${soundOn ? 'btn-ghost' : 'snd-off'}" type="button" id="snd" aria-pressed="${soundOn}">${esc(soundOn ? A('soundOn') : A('soundOff'))}</button>
     <button class="btn btn-ghost btn-sm" type="button" id="out">${esc(A('logout'))}</button></div>
   <div class="tabs" role="tablist" aria-label="${esc(A('h1'))}">${tabsFor(role).map((k) => `<button role="tab" id="tab-${k}" aria-selected="${k === tab}" aria-controls="panel" data-tab="${k}">${esc(A('tabs.' + k))}</button>`).join('')}</div>
-  ${waiting}
+  ${waiting}${resWaiting(role)}
   <div id="panel" role="tabpanel" aria-labelledby="tab-${tab}">${views[tab](orders, role, freshIds)}</div>`;
-  sig = JSON.stringify([orders, adapter.getSettings(), adapter.listCustomers(), tab, soundOn, filter, view]);
+  sig = JSON.stringify([orders, adapter.listReservations(), adapter.getReservationSettings(), adapter.getSettings(), adapter.listCustomers(), tab, soundOn, filter, view]);
   bind(role);
   if (tab === 'qr') drawQr();
 }
@@ -538,6 +544,8 @@ function bindOrderButtons(scope) {
 }
 
 function bind(role) {
+  $('#open-res')?.addEventListener('click', () => { tab = 'reservations'; render(); });
+  if (tab === 'reservations') bindReservations(role, render);
   $('#out').addEventListener('click', logout);
   $('#snd').addEventListener('click', () => {
     if (soundOn) { soundOn = false; stopAlarm(); } else { enableSound(); chime(); }
@@ -614,7 +622,7 @@ setInterval(() => {
   if (!session) return;
   const el = document.activeElement;
   const busy = EDITING.includes(tab) || (el && ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName));
-  const next = JSON.stringify([adapter.listOrders(), adapter.getSettings(), adapter.listCustomers(), tab, soundOn, filter, view]);
+  const next = JSON.stringify([adapter.listOrders(), adapter.listReservations(), adapter.getReservationSettings(), adapter.getSettings(), adapter.listCustomers(), tab, soundOn, filter, view]);
   if (!busy && next !== sig) render(); else watch();
 }, 1500);
 window.addEventListener('storage', () => { if (session && !EDITING.includes(tab) && !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) render(); });

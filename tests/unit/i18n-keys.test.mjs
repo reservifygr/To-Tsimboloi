@@ -13,6 +13,12 @@ test('every literal translation key used in the code exists in Greek and English
     for (const m of src.matchAll(/\b(?:t\((?:lang|'el'|'en'),\s*|T\(\s*)'([\w.]+)'(?=\s*[,)])/g)) {
       for (const l of ['el', 'en']) if (typeof get(l, m[1]) !== 'string') missing.push(`${f}: ${l} ${m[1]}`);
     }
+    for (const m of src.matchAll(/\bRA\('([\w.]+)'(?=\s*[,)])/g)) {
+      for (const l of ['el', 'en']) if (get(l, 'admin.res.' + m[1]) == null) missing.push(`${f}: ${l} admin.res.${m[1]}`);
+    }
+    if (f.endsWith('reserve.js')) for (const m of src.matchAll(/\bR\('([\w.]+)'(?=\s*[,)])/g)) {
+      for (const l of ['el', 'en']) if (typeof get(l, 'reserve.' + m[1]) !== 'string') missing.push(`${f}: ${l} reserve.${m[1]}`);
+    }
     for (const m of src.matchAll(/\bA\('([\w.]+)'(?=\s*[,)])\)/g)) {
       for (const l of ['el', 'en']) if (typeof get(l, 'admin.' + m[1]) !== 'string') missing.push(`${f}: ${l} admin.${m[1]}`);
     }

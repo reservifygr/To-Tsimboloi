@@ -8,7 +8,7 @@ import { start } from '../../scripts/serve.mjs';
 const PORT = 4300 + Math.floor(Math.random() * 400);
 const U = (p) => `http://localhost:${PORT}${p}`;
 let srv; let br;
-const ROUTES = ['', 'menu/', 'order/', 'events/', 'gallery/', 'offers/', 'contact/', 'privacy/', 'admin/'];
+const ROUTES = ['', 'menu/', 'order/', 'events/', 'gallery/', 'offers/', 'contact/', 'reserve/', 'privacy/', 'admin/'];
 
 before(async () => { srv = await start(PORT); br = await launch(); });
 after(() => { br?.close(); srv?.close(); });
@@ -450,5 +450,64 @@ test('admin: order receipt text has address and cash-to-collect; courier email i
   assert.equal(await p.eval(`document.querySelector('#s-courier').getAttribute('aria-invalid')`), 'true');
   await p.fill('#s-courier', 'courier@example.com'); await p.click('#s-save');
   assert.equal(await p.eval(`JSON.parse(localStorage.getItem('tsb.demo.settings.v1')).courierEmail`), 'courier@example.com');
+  clean(p);
+});
+
+test('reservations: guest books a slot, staff confirms it, owner capacity setting closes the slots, guest can look up and cancel', async () => {
+  const p = await page({ width: 390, height: 844, mobile: true });
+  await p.goto(U('/en/reserve/'));
+  await p.waitFor(`document.querySelector('#res-form')`);
+  const pickDate = `(()=>{const d=new Date(Date.now()+4*86400000);while(d.getUTCDay()!==6)d=new Date(d.getTime()+86400000);const v=d.toISOString().slice(0,10);const i=document.querySelector('#r-date');i.value=v;i.dispatchEvent(new Event('change',{bubbles:true}));return v})()`.replace('const d=new Date(Date.now()+4*86400000)', 'let d=new Date(Date.now()+4*86400000)');
+  const date = await p.eval(pickDate);
+  await p.waitFor(`document.querySelector('input[name=r-time]:not([disabled])')`);
+  await p.eval(`(()=>{document.querySelector('input[name=r-time][value="20:00"]').click();return true})()`);
+  // submitting without details shows field errors and stores nothing
+  await p.click('#r-submit');
+  await p.waitFor(`document.querySelector('#r-name[aria-invalid=true]')`);
+  assert.equal(await p.eval(`JSON.parse(localStorage.getItem('tsb.demo.reservations.v1')||'[]').length`), 0);
+  await p.eval(`(()=>{const s=document.querySelector('#r-party');s.value='4';s.dispatchEvent(new Event('change',{bubbles:true}));return true})()`);
+  await p.waitFor(`document.querySelector('input[name=r-time]:not([disabled])')`);
+  await p.eval(`(()=>{document.querySelector('input[name=r-time][value="20:00"]').click();return true})()`);
+  await p.fill('#r-name', 'Maria P.'); await p.fill('#r-phone', '694 123 4567');
+  await p.eval(`document.querySelector('#r-consent').click()`);
+  await p.click('#r-submit');
+  await p.waitFor(`document.querySelector('#res-ok')`);
+  const r = await p.eval(`JSON.parse(localStorage.getItem('tsb.demo.reservations.v1'))[0]`);
+  assert.equal(r.status, 'pending'); assert.equal(r.partySize, 4); assert.equal(r.time, '20:00'); assert.equal(r.date, date);
+  assert.match(await p.text('#res-ok'), /DEMO-RES-0001/);
+
+  // staff confirms
+  await p.goto(U('/en/admin/'));
+  await p.fill('#a-user', 'staff'); await p.fill('#a-pass', 'staff-demo'); await p.click('#login button[type=submit]');
+  await p.waitFor(`document.querySelector('#res-bar')`);
+  await p.click('#open-res');
+  await p.waitFor(`document.querySelector('.res-card')`);
+  assert.match(await p.text('.res-card'), /Maria P\./);
+  await p.click('[data-res][data-to="confirmed"]');
+  await p.waitFor(`JSON.parse(localStorage.getItem('tsb.demo.reservations.v1'))[0].status==='confirmed'`);
+  assert.equal(await p.eval(`document.querySelector('#rs-save')===null`), true); // staff has no save button
+  assert.equal(await p.eval(`document.querySelector('#rs-maxCapacity').disabled`), true); // only the owner edits limits
+  await p.eval(`sessionStorage.clear()`);
+
+  // owner shrinks capacity -> a party of 4 no longer fits anywhere that day
+  await p.goto(U('/en/admin/'));
+  await p.fill('#a-user', 'owner'); await p.fill('#a-pass', 'owner-demo'); await p.click('#login button[type=submit]');
+  await p.waitFor(`document.querySelector('#tab-reservations')`);
+  await p.click('#tab-reservations');
+  await p.waitFor(`document.querySelector('#rs-maxCapacity')`);
+  await p.fill('#rs-maxCapacity', '3'); await p.click('#rs-save');
+  await p.waitFor(`JSON.parse(localStorage.getItem('tsb.demo.reservation-settings.v1')).maxCapacity===3`);
+  await p.goto(U('/en/reserve/'));
+  await p.waitFor(`document.querySelector('#res-form')`);
+  await p.eval(`(()=>{const s=document.querySelector('#r-party');s.value='4';s.dispatchEvent(new Event('change',{bubbles:true}));const i=document.querySelector('#r-date');i.value='${date}';i.dispatchEvent(new Event('change',{bubbles:true}));return true})()`);
+  await p.waitFor(`document.querySelector('#slots .notice')`);
+  assert.equal(await p.count('input[name=r-time]:not([disabled])'), 0);
+
+  // guest looks the booking up and cancels it
+  await p.fill('#lk-ref', 'demo-res-0001'); await p.fill('#lk-phone', '6941234567');
+  await p.eval(`document.querySelector('#lk-form').requestSubmit()`);
+  await p.waitFor(`document.querySelector('#lk-cancel')`);
+  await p.click('#lk-cancel');
+  await p.waitFor(`JSON.parse(localStorage.getItem('tsb.demo.reservations.v1'))[0].status==='cancelled'`);
   clean(p);
 });

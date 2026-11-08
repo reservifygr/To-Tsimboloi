@@ -40,8 +40,8 @@ export const ROLE_TRANSITIONS = {
 };
 
 export const ROLE_ACTIONS = {
-  owner: ['orders', 'availability', 'prices', 'pause', 'prep_time', 'reports', 'simulate'],
-  staff: ['orders', 'availability', 'pause', 'reports', 'simulate'],
+  owner: ['orders', 'availability', 'prices', 'pause', 'prep_time', 'reports', 'simulate', 'reservations', 'res_settings'],
+  staff: ['orders', 'availability', 'pause', 'reports', 'simulate', 'reservations'],
   kitchen: ['orders', 'availability'],
 };
 
