@@ -6,13 +6,13 @@ import { eur, toCents } from '../../src/shared/money.js';
 
 const menu = MENU;
 
-test('menu: every item has bilingual names, integer cents, and is flagged unverified', () => {
+test('menu: every item has bilingual names, integer cents, and is has a boolean verified flag (drinks the owner confirmed are true)', () => {
   assert.ok(ITEMS.length >= 20);
   const ids = new Set();
   for (const i of ITEMS) {
     assert.ok(i.name.el && i.name.en, `${i.id} needs el+en`);
     assert.ok(Number.isInteger(i.price) && i.price > 0, `${i.id} price`);
-    assert.equal(i.verified, false, `${i.id} must stay unverified until owner signs off`);
+    assert.equal(typeof i.verified, 'boolean', `${i.id} needs a verified flag`);
     assert.ok(menu.categories.some((c) => c.id === i.cat), `${i.id} category`);
     assert.ok(!ids.has(i.id), `${i.id} duplicated`);
     ids.add(i.id);
