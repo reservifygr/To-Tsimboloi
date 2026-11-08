@@ -42,7 +42,7 @@ function header(c, lang, route) {
   const links = NAV.map((r) => `<li><a href="${pathFor(c, lang, r)}"${r === route ? ' aria-current="page"' : ''}>${esc(t(lang, 'nav.' + NAV_KEY[r]))}</a></li>`).join('');
   return `<header class="site-header" data-header>
   <div class="wrap bar">
-    <a class="brand" href="${pathFor(c, lang, '')}"><img class="brand-logo" src="${c.base}/images/logo-sign.webp" alt="${esc(S[lang].brand)}" width="440" height="218"></a>
+    <a class="brand" href="${pathFor(c, lang, '')}"><span class="wordmark">${esc(S[lang].brand)}</span></a>
     <nav id="site-nav" class="site-nav" aria-label="${esc(t(lang, 'nav.main'))}"><ul>${links}</ul></nav>
     <a class="btn btn-primary btn-sm head-call" href="tel:${VENUE.phoneTel}">${esc(t(lang, 'cta.book'))}</a>
     <a class="lang-switch" href="${pathFor(c, other, route)}" hreflang="${other}" lang="${other}" data-lang-switch="${other}" aria-label="${esc(t(lang, 'nav.langSwitchLabel'))}">${esc(t(lang, 'nav.langSwitch'))}</a>
@@ -54,7 +54,7 @@ function header(c, lang, route) {
 function footer(c, lang) {
   return `<footer class="site-footer">
   <div class="wrap foot-grid">
-    <div><img class="foot-logo" src="${c.base}/images/logo-sign.webp" alt="${esc(S[lang].brand)}" width="220" height="109" loading="lazy">
+    <div><p class="wordmark foot-mark">${esc(S[lang].brand)}</p>
       <p>${esc(lang === 'el' ? VENUE.street + ', ' + VENUE.city : VENUE.streetEn + ', ' + VENUE.cityEn)}</p>
       <p><a href="tel:${VENUE.phoneTel}">${esc(VENUE.phoneDisplay)}</a></p><p class="muted">${esc(t(lang, 'footer.hours'))}</p></div>
     <div><ul class="foot-links">${NAV.slice(1).map((r) => `<li><a href="${pathFor(c, lang, r)}">${esc(t(lang, 'nav.' + NAV_KEY[r]))}</a></li>`).join('')}<li><a href="${pathFor(c, lang, 'privacy')}">${esc(t(lang, 'footer.privacy'))}</a></li><li><a href="${VENUE.instagram.url}" target="_blank" rel="noopener me">${esc(t(lang, 'footer.instagram'))}</a></li></ul></div>
@@ -97,10 +97,12 @@ ${robots}
 <meta property="og:locale:alternate" content="${other === 'el' ? 'el_GR' : 'en_GB'}">
 <meta property="og:image" content="${c.site}${ogImage}">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#302d25">
+<meta name="theme-color" content="#f6efe3">
 <link rel="icon" href="${A('/favicon-32.png')}" sizes="32x32" type="image/png">
 <link rel="icon" href="${A('/icon-192.png')}" sizes="192x192" type="image/png">
 <link rel="apple-touch-icon" href="${A('/apple-touch-icon.png')}">
+<link rel="preload" href="${A('/fonts/manrope.woff')}" as="font" type="font/woff" crossorigin>
+<link rel="preload" href="${A('/fonts/serif-display.woff')}" as="font" type="font/woff" crossorigin>
 <link rel="stylesheet" href="${A('/assets/site.css')}?v=${c.version}">
 ${jsonld.map((j) => `<script type="application/ld+json">${JSON.stringify(j)}</script>`).join('\n')}
 </head>
@@ -158,7 +160,7 @@ function eventFeature(c, lang, e, { compact = false } = {}) {
   <div class="ef-poster"><img src="${c.base}${e.poster}" alt="${esc(imgAlt)}" width="636" height="844" loading="${compact ? 'lazy' : 'eager'}"></div>
   <div class="ef-copy">
     <div class="date-badge" aria-hidden="true"><span>${esc(monShort(lang, e.date))}</span><b>${dayNum(e.date)}</b></div>
-    <p class="kicker"><span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>${esc(t(lang, compact ? 'home.nextKicker' : 'events.nextTitle'))}</p>
+    <p class="kicker">${esc(t(lang, compact ? 'home.nextKicker' : 'events.nextTitle'))}</p>
     <h2 class="ef-title">${esc(longDate(lang, e.date))}</h2>
     <p class="ef-time">${esc(fmt(t(lang, 'events.from'), { t: e.time }))} <span class="countdown" data-countdown="${e.date}T${e.time}:00+02:00" data-today="${esc(t(lang, 'home.nextToday'))}" data-tomorrow="${esc(t(lang, 'home.nextTomorrow'))}" data-in="${esc(t(lang, 'home.nextIn'))}"></span></p>
     <p class="ef-lineup-h">${esc(t(lang, 'events.lineup'))}</p>
@@ -206,29 +208,25 @@ function homePage(c, lang) {
   const next = upcoming[0];
   const sig = ['saganaki', 'tirokafteri', 'fava', 'stuffed-sausage', 'meat-platter', 'orange-pie'].map((id) => MENU.items.find((i) => i.id === id));
   const sigHtml = sig.map((i) => `<li class="reveal"><span>${esc(L(i.name, lang))}</span><span class="dots" aria-hidden="true"></span><span class="price">${i.optionGroups ? esc(t(lang, 'menu.from')) + ' ' : ''}${esc(eur(i.price, lang))}</span></li>`).join('');
-  const ticker = [1, 2, 3, 4, 5].map((n) => `<span>${esc(t(lang, 'home.ticker' + n))}</span>`).join('');
   const body = `
 <section class="hero2" data-hero>
   <img class="hero-bg" src="${c.base}/images/interior.webp" alt="" width="1600" height="1067" fetchpriority="high" data-parallax>
   <div class="hero-veil"></div>
-  <div class="notes" aria-hidden="true">${[0, 1, 2, 3, 4, 5].map((i) => `<svg class="note n${i}" viewBox="0 0 24 24"><path fill="currentColor" d="${i % 2 ? 'M9 17V5l10-2v12.2A3 3 0 1 1 17 13V6.3L11 7.5V17a3 3 0 1 1-2-2.8z' : 'M12 3v10.6A4 4 0 1 0 14 17V7h4V3z'}"/></svg>`).join('')}</div>
   <div class="wrap hero-grid">
     <div class="hero-copy">
       <p class="kicker hero-in" style="--d:.05s">${esc(t(lang, 'home.heroKicker'))}</p>
       <h1 class="hero-in" style="--d:.15s">${esc(t(lang, 'home.heroTitle'))}</h1>
       <p class="lead hero-in" style="--d:.3s">${esc(t(lang, 'home.heroLead'))}</p>
       <div class="cta-row hero-in" style="--d:.45s">
-        <a class="btn btn-primary" href="tel:${VENUE.phoneTel}">${esc(t(lang, 'cta.book'))} <span class="btn-sub">${esc(VENUE.phoneDisplay)}</span></a>
-        <a class="btn btn-light" href="${pathFor(c, lang, 'menu')}">${esc(t(lang, 'cta.menu'))}</a>
-        <a class="btn btn-light" href="${pathFor(c, lang, 'order')}">${esc(t(lang, 'cta.order'))}</a>
-        <a class="btn btn-ghost" href="${pathFor(c, lang, 'events')}">${esc(t(lang, 'cta.events'))}</a>
+        <a class="btn btn-primary" href="${pathFor(c, lang, 'order')}">${esc(t(lang, 'cta.order'))}</a>
+        <a class="btn btn-ghost" href="${pathFor(c, lang, 'menu')}">${esc(t(lang, 'cta.menu'))}</a>
+        <a class="btn btn-ghost" href="tel:${VENUE.phoneTel}">${esc(t(lang, 'cta.book'))} <span class="btn-sub">${esc(VENUE.phoneDisplay)}</span></a>
       </div>
       <p class="hero-note hero-in" style="--d:.55s">${esc(t(lang, 'cta.bookNote'))}</p>
     </div>
-    <figure class="neon-card hero-in" style="--d:.35s"><img src="${c.base}/images/live-music-sign.webp" alt="${lang === 'el' ? 'Φωτεινή επιγραφή «Το Τσιμπολόι Live music» πάνω από τη σκηνή' : 'Neon sign reading "To Tsimboloi Live music" above the stage'}" width="814" height="814"></figure>
+    <figure class="hero-photo hero-in" style="--d:.35s"><img src="${c.base}/images/live-music-sign.webp" alt="${lang === 'el' ? 'Φωτεινή επιγραφή «Το Τσιμπολόι Live music» πάνω από τη σκηνή' : 'Neon sign reading "To Tsimboloi Live music" above the stage'}" width="814" height="814"></figure>
   </div>
 </section>
-<div class="marquee" aria-hidden="true"><div class="marquee-track">${ticker}${ticker}${ticker}${ticker}</div></div>
 
 ${next ? `<section class="section next-night"><div class="wrap">${eventFeature(c, lang, next, { compact: true })}</div></section>` : ''}
 
@@ -263,7 +261,6 @@ ${next ? `<section class="section next-night"><div class="wrap">${eventFeature(c
   <article class="card reveal"><p class="kicker">${esc(t(lang, 'home.offerKicker'))}</p><h3>${esc(t(lang, 'home.offerTitle'))}</h3><p>${esc(t(lang, 'home.offerP'))}</p><span class="tag">${esc(t(lang, 'offers.existing'))}</span><br><a class="link" href="${pathFor(c, lang, 'offers')}">${esc(t(lang, 'home.offerLink'))} ${arrow}</a></article>
 </div></div></section>
 
-<svg class="wave" viewBox="0 0 1440 46" preserveAspectRatio="none" aria-hidden="true" style="margin-bottom:-1px"><path d="M0 46V22C180 2 360 4 540 20s360 26 540 6 270-16 360-8v28z"/></svg>
 <section class="section dark visit" style="padding-top:2.5rem"><div class="wrap split">
   <div><p class="kicker">${esc(t(lang, 'home.visitKicker'))}</p><h2 class="reveal">${esc(t(lang, 'home.visitTitle'))}</h2>
   <p><a class="big-phone" href="tel:${VENUE.phoneTel}">${esc(VENUE.phoneDisplay)}</a></p>

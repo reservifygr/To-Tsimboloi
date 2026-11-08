@@ -151,3 +151,6 @@ Menu photos and the full drinks list, Instagram images/videos with captions and 
 - **Customers.** "Save customer" on any order stores name, phone, delivery address and notes in the Customers tab (regular badge on their orders). Customers can also tick "Remember my details on this device" at checkout; that data stays in their own browser.
 - **Checkout.** The order page keeps a small cart with a Checkout button (a floating button on phones). The details form opens as a dialog, so nobody scrolls to the bottom of the menu.
 - **Courier email.** "Email to courier" opens the staff member's mail app with the order slip addressed to the courier email set in Settings. The demo sends nothing itself; production would send through an email service.
+
+## V4: visual redesign
+Warm taverna palette (cream, olive, terracotta, warm near-black), Noto Serif Display + Manrope (both OFL, self-hosted in `public/fonts`, Latin + Greek subsets), calm buttons, text wordmark, framed hero photo. Glow, floating notes, equaliser, marquee and wave dividers were removed on purpose. Design directions explored in a Design canvas (A taverna, B music night, C Aegean editorial); the site uses A with B's dark live-music panel.

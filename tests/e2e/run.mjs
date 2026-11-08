@@ -251,7 +251,7 @@ test('admin: incoming popup (own time, reject with reason, later), archive searc
   await p.click('#open-in');
   await p.waitFor(`document.querySelector('#incoming').open`);
   await p.click('#in-later');
-  await p.waitFor(`!document.querySelector('#incoming').open`);
+  await p.waitFor(`!document.querySelector('#incoming').open && document.querySelector('.alert-bar')`); // the bar proves the dismissal was recorded
   await p.click('#sim'); // second simulated order is a delivery
   await p.waitFor(`document.querySelector('#incoming').open`);
   assert.equal(await p.eval(`document.querySelector('#eta').value`), '40'); // 25 default + 15 for delivery: a suggestion, not a flat rate
