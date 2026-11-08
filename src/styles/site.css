@@ -617,6 +617,6 @@ video.hero-bg{inset:0;height:100%;opacity:1;object-fit:cover}
 @media (max-width:1060px) and (min-width:861px){.site-nav ul{gap:.9rem}.site-nav a{font-size:.9rem}}
 .hero-grid{grid-template-columns:minmax(0,760px)}
 .hero2{min-height:min(84vh,760px)}
-.clips{max-width:none;grid-template-columns:repeat(3,minmax(0,1fr))}
+.clips{max-width:none;grid-template-columns:repeat(5,minmax(0,1fr))}@media (max-width:900px){.clips{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .clip video{aspect-ratio:3/4}
 @media (max-width:640px){.clips{grid-template-columns:1fr 1fr 1fr;gap:.5rem}.clip figcaption{font-size:.78rem}}
