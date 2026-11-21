@@ -1,0 +1,3 @@
+# DEMO build: not for indexing. Set INDEXABLE=1 at build time once the owner approves go-live.
+User-agent: *
+Disallow: /
